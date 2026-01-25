@@ -54,8 +54,6 @@ Portfolio-Project/
 │   └── __init__.py
 ├── database/                     # Gestion de la base de données
 │   └── __init__.py
-├── middleware/                   # Middlewares personnalisés
-│   └── __init__.py
 ├── tests/                        # Tests unitaires
 │   └── __init__.py
 ├── utils/                        # Utilitaires et helpers
