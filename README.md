@@ -62,3 +62,40 @@ Portfolio-Project/
 ├── run.py                        # Point d'entrée de l'application
 └── requirements.txt              # Dépendances Python
 ```
+Installation et Démarrage
+Suivez ces étapes pour installer et lancer le projet Python.
+
+1. Installation des dépendances
+```
+Bash
+
+pip install -r requirements.txt
+```
+2. Configuration Base de Données
+```
+Bash
+
+python database/init_database.py
+```
+3. Lancer le Serveur
+```
+Bash
+
+python run.py
+```
+🧪 Commandes de Test
+Le projet utilise Pytest. Les tests s'exécutent sur une base de données en mémoire.
+
+Lancer tous les tests
+Pour vérifier que toute l'application fonctionne correctement :
+```
+Bash
+
+pytest
+```
+Lancer un fichier de test spécifique
+```
+Bash
+
+pytest tests/test_auth.py
+```
