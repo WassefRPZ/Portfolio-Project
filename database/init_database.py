@@ -1,6 +1,6 @@
 """
 ============================================
-Board Game Meetup - Database Setup
+Board Game Meetup - Database
 ============================================
 """
 import mysql.connector
@@ -82,6 +82,18 @@ def execute_sql_script():
             user_id VARCHAR(50) NOT NULL,
             content TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+        )""")
+
+        # 5. comments
+        cursor.execute("""
+        CREATE TABLE comments (
+            comment_id INT AUTO_INCREMENT PRIMARY KEY,
+            event_id VARCHAR(50) NOT NULL,
+            user_id VARCHAR(50) NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         )""")
 
