@@ -1,101 +1,53 @@
-# Portfolio Backend API
+# Module Base de Données - BoardGame Meetup
 
-Backend API Python pour gérer un portfolio professionnel avec gestion des utilisateurs, projets, compétences et expériences.
+Ce module contient les scripts d'initialisation et l'architecture de la base de données MySQL pour le MVP **BoardGame Meetup**.
 
-## Structure du Projet
+## Architecture des Données
 
-### Dossiers
+La base de données relationnelle est conçue pour gérer les interactions entre joueurs, événements et jeux.
 
-- **app/** - Cœur de l'application
-  - **api/v1/** - Endpoints API version 1 
-  - **models/** - Modèles de données
-  - **services/** - Logique métier et façade pour les services
-  - **persistence/** - Gestion de la persistance des données et repository
+### Schéma
+* **Users** : Profils joueurs, rôles (admin/user), géolocalisation.
+* **Games** : Bibliothèque de jeux de société.
+* **Events** : Sessions de jeu organisées.
+* **Participations** : Gestion des inscriptions et liste d'attente.
+* **Social** : Système d'amis (`friendships`) avec contraintes d'unicité et commentaires.
 
-- **config/** - Configuration de l'application
-- **utils/** - Utilitaires et fonctions helper
-- **database/** - Gestion de la base de données
-- **tests/** - Tests unitaires et d'intégration
+---
 
-### Fichiers racine
+## Installation et Configuration
 
-- **run.py** - Point d'entrée principal de l'application
-- **config.py** - Configuration globale (variables d'environnement, paramètres)
-- **requirements.txt** - Dépendances Python
-- **# Board Game Meetup - Application
+### Prérequis
+* Python 3.8+
+* MySQL Server 8.0+
+* Pip (Gestionnaire de paquets Python)
 
-Application pour mettre en relation les amateurs de jeux de société et organiser des rencontres.
+### 1. Configuration de l'environnement
+Installez les dépendances nécessaires :
+```bash
+pip install mysql-connector-python
 
-## 📁 Structure du Projet
+### 2. initialiser et tester la base de donnée
 
-```
-Portfolio-Project/
-├── app/                          # Application principale (Python/Flask)
-│   ├── __init__.py
-│   ├── api/                      # Routes et endpoints API
-│   │   ├── __init__.py
-│   │   └── v1/                   # Version 1 de l'API
-│   ├── models/                   # Modèles de données
-│   ├── services/                 # Logique métier
-│   │   └── facade.py             # Façade pour les services
-│   └── persistence/              # Accès aux données
-│       └── repository.py         # Repository pattern
-├── backend/                      # Backend Node.js
-│   └── src/
-│       └── routes/               # Routes API Node.js
-│           ├── auth.js           # Authentification
-│           ├── users.js          # Profils utilisateurs
-│           ├── games.js          # Recherche de jeux
-│           ├── events.js         # Gestion des événements
-│           ├── friends.js        # Gestion des amis
-│           ├── posts.js          # Publications/Actions
-│           └── search.js         # Recherche globale
-├── config/                       # Configuration de l'application
-│   └── __init__.py
-├── database/                     # Gestion de la base de données
-│   └── __init__.py
-├── tests/                        # Tests unitaires
-│   └── __init__.py
-├── utils/                        # Utilitaires et helpers
-│   └── __init__.py
-├── config.py                     # Configuration principale
-├── run.py                        # Point d'entrée de l'application
-└── requirements.txt              # Dépendances Python
-```
-Installation et Démarrage
-Suivez ces étapes pour installer et lancer le projet Python.
+ # Executer la commande
 
-1. Installation des dépendances
-```
-Bash
+sudomysql
 
-pip install -r requirements.txt
-```
-2. Configuration Base de Données
-```
-Bash
+# Exécutez ces commandes dans votre terminal MySQL
 
-python database/init_database.py
-```
-3. Lancer le Serveur
-```
-Bash
+CREATE USER IF NOT EXISTS 'dev_user'@'localhost' IDENTIFIED BY '';
 
-python run.py
-```
-🧪 Commandes de Test
-Le projet utilise Pytest. Les tests s'exécutent sur une base de données en mémoire.
+GRANT ALL PRIVILEGES ON *.* TO 'dev_user'@'localhost';
 
-Lancer tous les tests
-Pour vérifier que toute l'application fonctionne correctement :
-```
-Bash
+FLUSH PRIVILEGES;
 
-pytest
-```
-Lancer un fichier de test spécifique
-```
-Bash
+EXIT;
+# Lancez le script d'automatisation pour créer les tables et insérer les données de test (seed) 
 
-pytest tests/test_auth.py
-```
+python3 database/init_database.py
+
+### vérification des données
+
+# Lister les utilisateurs créés
+
+mysql -u dev_user -D boardgame_meetup -e "SELECT user_id, username, email FROM users;"
