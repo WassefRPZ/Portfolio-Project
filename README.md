@@ -29,7 +29,7 @@ pip install mysql-connector-python
 
 ### 2. initialiser et tester la base de donnée
 
- # Executer la commande
+ # Lancer mysql
 
 sudomysql
 
