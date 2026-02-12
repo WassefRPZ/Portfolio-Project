@@ -1,24 +1,71 @@
-from flask import request, jsonify
+"""
+============================================
+Routes d'authentification
+============================================
+"""
+from flask import Blueprint, request, jsonify
 from app.services.facade import BoardGameFacade
-from app.api.v1 import api_v1
+from app.utils.auth import generate_token
 
+auth_ns = Blueprint('auth', __name__)
 facade = BoardGameFacade()
 
-@api_v1.route('/auth/register', methods=['POST'])
+@auth_ns.route('/register', methods=['POST'])
 def register():
+    """
+    POST /api/v1/auth/register
+    Body: { "username", "email", "password", "city", "region"?, "bio"? }
+    """
     data = request.get_json()
-    user, error = facade.register_user(data)
-    if error:
-        return jsonify({"error": error}), 400
-    return jsonify({"success": True, "data": user}), 201
-
-@api_v1.route('/auth/login', methods=['POST'])
-def login():
-    data = request.get_json()
+    
     if not data:
-        return jsonify({"error": "Missing data"}), 400
-        
-    user = facade.login_user(data.get('email'), data.get('password'))
-    if user:
-        return jsonify({"success": True, "data": {"user": user, "token": "fake-jwt-token"}}), 200
-    return jsonify({"error": "Invalid credentials"}), 401
+        return jsonify({"success": False, "error": "Pas de données envoyées"}), 400
+    
+    user, error = facade.register_user(data)
+    
+    if error:
+        return jsonify({"success": False, "error": error}), 400
+    
+    # Générer le token JWT
+    token = generate_token(user['user_id'], user['username'], user['email'])
+    
+    return jsonify({
+        "success": True,
+        "data": {
+            "user": user,
+            "token": token
+        }
+    }), 201
+
+@auth_ns.route('/login', methods=['POST'])
+def login():
+    """
+    POST /api/v1/auth/login
+    Body: { "email", "password" }
+    """
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"success": False, "error": "Pas de données envoyées"}), 400
+    
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        return jsonify({"success": False, "error": "Email et mot de passe requis"}), 400
+    
+    user = facade.login_user(email, password)
+    
+    if not user:
+        return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
+    
+    # Générer le token JWT
+    token = generate_token(user['user_id'], user['username'], user['email'])
+    
+    return jsonify({
+        "success": True,
+        "data": {
+            "user": user,
+            "token": token
+        }
+    }), 200
