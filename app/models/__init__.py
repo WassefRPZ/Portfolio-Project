@@ -1,60 +1,245 @@
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from app import db
 
-db = SQLAlchemy()
-
+# ==========================================
+# Model User
+# ==========================================
 class User(db.Model):
     __tablename__ = 'users'
+    
     user_id = db.Column(db.String(50), primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.Enum('user', 'admin'), default='user')
     city = db.Column(db.String(100), nullable=False)
+    region = db.Column(db.String(100))
     bio = db.Column(db.Text)
+    profile_image_url = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relations
+    events_created = db.relationship('Event', backref='creator', lazy=True, foreign_keys='Event.creator_id')
+    participations = db.relationship('EventParticipant', backref='participant', lazy=True)
+    comments = db.relationship('Comment', backref='author', lazy=True)
+    favorite_games = db.relationship('FavoriteGame', backref='user', lazy=True)
     
     def to_dict(self):
         return {
-            "id": self.user_id,
+            "user_id": self.user_id,
             "username": self.username,
             "email": self.email,
             "city": self.city,
-            "bio": self.bio
+            "region": self.region,
+            "bio": self.bio,
+            "profile_image_url": self.profile_image_url,
+            "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
-class Event(db.Model):
-    __tablename__ = 'events'
-    event_id = db.Column(db.String(50), primary_key=True)
-    creator_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
+# ==========================================
+# Model Game
+# ==========================================
+class Game(db.Model):
+    __tablename__ = 'games'
+    
+    game_id = db.Column(db.String(50), primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    game_name = db.Column(db.String(200), nullable=False)
-    city = db.Column(db.String(100), nullable=False)
-    event_date = db.Column(db.Date, nullable=False)
-    event_time = db.Column(db.Time, nullable=False)
-    max_participants = db.Column(db.Integer, nullable=False)
+    min_players = db.Column(db.Integer, nullable=False)
+    max_players = db.Column(db.Integer, nullable=False)
+    play_time = db.Column(db.Integer, nullable=False)  # en minutes
+    image_url = db.Column(db.String(255))
+    
+    # Relations
+    events = db.relationship('Event', backref='game', lazy=True)
+    favorites = db.relationship('FavoriteGame', backref='game', lazy=True)
     
     def to_dict(self):
         return {
-            "id": self.event_id,
-            "title": self.title,
-            "game": self.game_name,
-            "city": self.city,
-            "date": self.event_date.isoformat() if self.event_date else None,
-            "time": self.event_time.strftime("%H:%M:%S") if self.event_time else None
+            "game_id": self.game_id,
+            "name": self.name,
+            "description": self.description,
+            "min_players": self.min_players,
+            "max_players": self.max_players,
+            "play_time": self.play_time,
+            "image_url": self.image_url
         }
 
-class Friendship(db.Model):
-    __tablename__ = 'friendships'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    requester_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
-    receiver_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
-    status = db.Column(db.Enum('pending', 'accepted', 'rejected'), default='pending')
+# ==========================================
+# Model Event
+# ==========================================
+class Event(db.Model):
+    __tablename__ = 'events'
+    
+    event_id = db.Column(db.String(50), primary_key=True)
+    creator_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
+    game_id = db.Column(db.String(50), db.ForeignKey('games.game_id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    city = db.Column(db.String(100), nullable=False)
+    location_text = db.Column(db.String(255), nullable=False)
+    latitude = db.Column(db.Numeric(10, 8))
+    longitude = db.Column(db.Numeric(11, 8))
+    event_start = db.Column(db.DateTime, nullable=False)
+    max_participants = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.Enum('open', 'full', 'cancelled', 'completed'), default='open')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relations
+    participants = db.relationship('EventParticipant', backref='event', lazy=True, cascade='all, delete-orphan')
+    comments = db.relationship('Comment', backref='event', lazy=True, cascade='all, delete-orphan')
+    
+    def to_dict(self, include_participants=False):
+        data = {
+            "event_id": self.event_id,
+            "creator_id": self.creator_id,
+            "game_id": self.game_id,
+            "title": self.title,
+            "description": self.description,
+            "city": self.city,
+            "location_text": self.location_text,
+            "latitude": float(self.latitude) if self.latitude else None,
+            "longitude": float(self.longitude) if self.longitude else None,
+            "event_start": self.event_start.isoformat() if self.event_start else None,
+            "max_participants": self.max_participants,
+            "status": self.status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "current_participants": len(self.participants)
+        }
+        
+        if include_participants:
+            data["participants"] = [p.to_dict() for p in self.participants]
+            
+        return data
+
+# ==========================================
+# Model EventParticipant
+# ==========================================
+class EventParticipant(db.Model):
+    __tablename__ = 'event_participants'
+    
+    participant_id = db.Column(db.String(50), primary_key=True)
+    event_id = db.Column(db.String(50), db.ForeignKey('events.event_id'), nullable=False)
+    user_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
+    status = db.Column(db.Enum('confirmed', 'waitlist', 'cancelled'), default='confirmed')
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            "participant_id": self.participant_id,
+            "event_id": self.event_id,
+            "user_id": self.user_id,
+            "status": self.status,
+            "joined_at": self.joined_at.isoformat() if self.joined_at else None
+        }
+
+# ==========================================
+# Model Comment
+# ==========================================
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    
+    comment_id = db.Column(db.String(50), primary_key=True)
+    event_id = db.Column(db.String(50), db.ForeignKey('events.event_id'), nullable=False)
+    user_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def to_dict(self):
         return {
-            "requester_id": self.requester_id,
-            "receiver_id": self.receiver_id,
-            "status": self.status
+            "comment_id": self.comment_id,
+            "event_id": self.event_id,
+            "user_id": self.user_id,
+            "content": self.content,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+# ==========================================
+# Model Friendship
+# ==========================================
+class Friendship(db.Model):
+    __tablename__ = 'friendships'
+    
+    user_id_1 = db.Column(db.String(50), db.ForeignKey('users.user_id'), primary_key=True)
+    user_id_2 = db.Column(db.String(50), db.ForeignKey('users.user_id'), primary_key=True)
+    action_user_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
+    status = db.Column(db.Enum('pending', 'accepted', 'declined', 'blocked'), default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            "user_id_1": self.user_id_1,
+            "user_id_2": self.user_id_2,
+            "action_user_id": self.action_user_id,
+            "status": self.status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+# ==========================================
+# Model FavoriteGame
+# ==========================================
+class FavoriteGame(db.Model):
+    __tablename__ = 'favorite_games'
+    
+    user_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), primary_key=True)
+    game_id = db.Column(db.String(50), db.ForeignKey('games.game_id'), primary_key=True)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            "user_id": self.user_id,
+            "game_id": self.game_id,
+            "added_at": self.added_at.isoformat() if self.added_at else None
+        }
+
+# ==========================================
+# Model Review
+# ==========================================
+class Review(db.Model):
+    __tablename__ = 'reviews'
+    
+    review_id = db.Column(db.String(50), primary_key=True)
+    event_id = db.Column(db.String(50), db.ForeignKey('events.event_id'), nullable=False)
+    reviewer_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
+    target_user_id = db.Column(db.String(50), db.ForeignKey('users.user_id'))
+    rating = db.Column(db.SmallInteger, nullable=False)  # 1-5
+    comment = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            "review_id": self.review_id,
+            "event_id": self.event_id,
+            "reviewer_id": self.reviewer_id,
+            "target_user_id": self.target_user_id,
+            "rating": self.rating,
+            "comment": self.comment,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+# ==========================================
+# Model Notification
+# ==========================================
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    
+    notification_id = db.Column(db.String(50), primary_key=True)
+    user_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
+    type = db.Column(db.String(50), nullable=False)
+    message = db.Column(db.String(255), nullable=False)
+    reference_id = db.Column(db.String(50))
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            "notification_id": self.notification_id,
+            "user_id": self.user_id,
+            "type": self.type,
+            "message": self.message,
+            "reference_id": self.reference_id,
+            "is_read": self.is_read,
+            "created_at": self.created_at.isoformat() if self.created_at else None
         }
