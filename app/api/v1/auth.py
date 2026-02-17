@@ -1,71 +1,95 @@
-"""
-============================================
-Routes d'authentification
-============================================
-"""
-from flask import Blueprint, request, jsonify
+"""Auth API endpoints for BoardGame Meetup application."""
+from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import create_access_token
 from app.services.facade import BoardGameFacade
-from app.utils.auth import generate_token
 
-auth_ns = Blueprint('auth', __name__)
+api = Namespace('auth', description='Authentication operations')
 facade = BoardGameFacade()
 
-@auth_ns.route('/register', methods=['POST'])
-def register():
-    """
-    POST /api/v1/auth/register
-    Body: { "username", "email", "password", "city", "region"?, "bio"? }
-    """
-    data = request.get_json()
-    
-    if not data:
-        return jsonify({"success": False, "error": "Pas de données envoyées"}), 400
-    
-    user, error = facade.register_user(data)
-    
-    if error:
-        return jsonify({"success": False, "error": error}), 400
-    
-    # Générer le token JWT
-    token = generate_token(user['user_id'], user['username'], user['email'])
-    
-    return jsonify({
-        "success": True,
-        "data": {
-            "user": user,
-            "token": token
-        }
-    }), 201
+register_model = api.model('Register', {
+    'username': fields.String(required=True, description='Nom utilisateur'),
+    'email': fields.String(required=True, description='Email'),
+    'password': fields.String(required=True, description='Mot de passe'),
+    'city': fields.String(required=True, description='Ville'),
+    'region': fields.String(required=False, description='Région'),
+    'bio': fields.String(required=False, description='Bio')
+})
 
-@auth_ns.route('/login', methods=['POST'])
-def login():
-    """
-    POST /api/v1/auth/login
-    Body: { "email", "password" }
-    """
-    data = request.get_json()
-    
-    if not data:
-        return jsonify({"success": False, "error": "Pas de données envoyées"}), 400
-    
-    email = data.get('email')
-    password = data.get('password')
-    
-    if not email or not password:
-        return jsonify({"success": False, "error": "Email et mot de passe requis"}), 400
-    
-    user = facade.login_user(email, password)
-    
-    if not user:
-        return jsonify({"success": False, "error": "Email ou mot de passe incorrect"}), 401
-    
-    # Générer le token JWT
-    token = generate_token(user['user_id'], user['username'], user['email'])
-    
-    return jsonify({
-        "success": True,
-        "data": {
-            "user": user,
-            "token": token
-        }
-    }), 200
+login_model = api.model('Login', {
+    'email': fields.String(required=True, description='Email'),
+    'password': fields.String(required=True, description='Mot de passe')
+})
+
+
+@api.route('/register')
+class Register(Resource):
+
+    @api.expect(register_model, validate=True)
+    @api.response(201, 'Compte créé avec succès')
+    @api.response(400, 'Données invalides ou email déjà utilisé')
+    def post(self):
+
+        data = api.payload
+
+        existing = facade.get_user_by_email(data['email'])
+        if existing:
+            return {'error': 'Cet email est déjà utilisé'}, 400
+
+        existing_username = facade.get_user_by_username(data['username'])
+        if existing_username:
+            return {'error': 'Ce nom d\'utilisateur est déjà pris'}, 400
+
+        try:
+            user, error = facade.register_user(data)
+            if error:
+                return {'error': error}, 400
+
+
+            access_token = create_access_token(
+                identity=str(user['user_id']),
+                additional_claims={
+                    'username': user['username'],
+                    'email': user['email']
+                }
+            )
+
+            return {
+                'message': 'Compte créé avec succès',
+                'user': user,
+                'access_token': access_token
+            }, 201
+
+        except Exception as e:
+            return {'error': str(e)}, 400
+
+
+
+@api.route('/login')
+class Login(Resource):
+
+    @api.expect(login_model, validate=True)
+    @api.response(200, 'Connexion réussie')
+    @api.response(401, 'Email ou mot de passe incorrect')
+    def post(self):
+
+        credentials = api.payload
+
+
+        user = facade.login_user(credentials['email'], credentials['password'])
+
+        if not user:
+            return {'error': 'Email ou mot de passe incorrect'}, 401
+
+
+        access_token = create_access_token(
+            identity=str(user['user_id']),
+            additional_claims={
+                'username': user['username'],
+                'email': user['email']
+            }
+        )
+
+        return {
+            'access_token': access_token,
+            'user': user
+        }, 200

@@ -1,93 +1,142 @@
-"""
-============================================
-Routes utilisateurs
-============================================
-"""
-from flask import Blueprint, request, jsonify
+"""User API endpoints for BoardGame Meetup application."""
+from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.facade import BoardGameFacade
-from app.utils.auth import token_required
 
-users_ns = Blueprint('users', __name__)
+api = Namespace('users', description='User operations')
 facade = BoardGameFacade()
 
-@users_ns.route('/me', methods=['GET'])
-@token_required
-def get_my_profile(current_user_id):
-    """
-    GET /api/v1/users/me
-    Headers: Authorization: Bearer <token>
-    """
-    user = facade.get_user(current_user_id)
-    
-    if not user:
-        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 404
-    
-    return jsonify({"success": True, "data": user}), 200
+user_update_model = api.model('UserUpdate', {
+    'username': fields.String(required=False, description='Nom utilisateur'),
+    'city': fields.String(required=False, description='Ville'),
+    'region': fields.String(required=False, description='Région'),
+    'bio': fields.String(required=False, description='Bio'),
+    'profile_image_url': fields.String(required=False, description='Photo de profil')
+})
 
-@users_ns.route('/me', methods=['PUT'])
-@token_required
-def update_my_profile(current_user_id):
-    """
-    PUT /api/v1/users/me
-    Headers: Authorization: Bearer <token>
-    Body: { "username"?, "city"?, "region"?, "bio"?, "profile_image_url"? }
-    """
-    data = request.get_json()
-    
-    if not data:
-        return jsonify({"success": False, "error": "Pas de données à mettre à jour"}), 400
-    
-    updated_user = facade.update_user_profile(current_user_id, data)
-    
-    if not updated_user:
-        return jsonify({"success": False, "error": "Erreur lors de la mise à jour"}), 500
-    
-    return jsonify({"success": True, "data": updated_user}), 200
+favorite_game_model = api.model('FavoriteGame', {
+    'game_id': fields.String(required=True, description='ID du jeu')
+})
 
-@users_ns.route('/search', methods=['GET'])
-@token_required
-def search_users(current_user_id):
-    """
-    GET /api/v1/users/search?q=<query>&city=<city>
-    Headers: Authorization: Bearer <token>
-    """
-    query = request.args.get('q', '')
-    city = request.args.get('city')
-    
-    users = facade.search_users(query, city)
-    
-    return jsonify({"success": True, "data": users}), 200
 
-@users_ns.route('/me/favorite-games', methods=['POST'])
-@token_required
-def add_favorite_game(current_user_id):
-    """
-    POST /api/v1/users/me/favorite-games
-    Headers: Authorization: Bearer <token>
-    Body: { "game_id" }
-    """
-    data = request.get_json()
-    
-    if not data or 'game_id' not in data:
-        return jsonify({"success": False, "error": "game_id requis"}), 400
-    
-    favorite, error = facade.add_favorite_game(current_user_id, data['game_id'])
-    
-    if error:
-        return jsonify({"success": False, "error": error}), 400
-    
-    return jsonify({"success": True, "data": favorite}), 201
+@api.route('/me')
+class Me(Resource):
 
-@users_ns.route('/me/favorite-games/<game_id>', methods=['DELETE'])
-@token_required
-def remove_favorite_game(current_user_id, game_id):
-    """
-    DELETE /api/v1/users/me/favorite-games/<game_id>
-    Headers: Authorization: Bearer <token>
-    """
-    result, error = facade.remove_favorite_game(current_user_id, game_id)
-    
-    if error:
-        return jsonify({"success": False, "error": error}), 400
-    
-    return jsonify({"success": True, "message": "Jeu retiré des favoris"}), 200
+    @jwt_required()
+    @api.response(200, 'Profil récupéré avec succès')
+    @api.response(404, 'Utilisateur introuvable')
+    def get(self):
+
+        current_user_id = get_jwt_identity()
+
+        user = facade.get_user(current_user_id)
+        if not user:
+            return {'error': 'Utilisateur introuvable'}, 404
+
+        return {'success': True, 'data': user}, 200
+
+    @jwt_required()
+    @api.expect(user_update_model, validate=True)
+    @api.response(200, 'Profil mis à jour avec succès')
+    @api.response(404, 'Utilisateur introuvable')
+    def put(self):
+
+        current_user_id = get_jwt_identity()
+        data = api.payload
+
+        updated_user = facade.update_user_profile(current_user_id, data)
+        if not updated_user:
+            return {'error': 'Utilisateur introuvable'}, 404
+
+        return {'success': True, 'data': updated_user}, 200
+
+
+
+@api.route('/search')
+class UserSearch(Resource):
+
+    @jwt_required()
+    @api.response(200, 'Résultats de la recherche')
+    @api.response(400, 'Paramètre de recherche manquant')
+    def get(self):
+
+        from flask import request
+        query = request.args.get('q', '')
+        city = request.args.get('city')
+
+        if not query and not city:
+            return {'error': 'Paramètre q ou city requis'}, 400
+
+        users = facade.search_users(query, city)
+        return {'success': True, 'data': users}, 200
+
+
+@api.route('/<user_id>')
+class UserResource(Resource):
+
+    @jwt_required()
+    @api.response(200, 'Profil récupéré avec succès')
+    @api.response(404, 'Utilisateur introuvable')
+    def get(self, user_id):
+
+        user = facade.get_user(user_id)
+        if not user:
+            return {'error': 'Utilisateur introuvable'}, 404
+
+        return {'success': True, 'data': user}, 200
+
+
+@api.route('/me/events')
+class MyEvents(Resource):
+
+    @jwt_required()
+    @api.response(200, 'Événements récupérés avec succès')
+    def get(self):
+        current_user_id = get_jwt_identity()
+        events = facade.get_user_events(current_user_id)
+        return {'success': True, 'data': events}, 200
+
+
+@api.route('/me/favorite-games')
+class MyFavoriteGames(Resource):
+
+    @jwt_required()
+    @api.response(200, 'Jeux favoris récupérés avec succès')
+    def get(self):
+
+        current_user_id = get_jwt_identity()
+        favorites = facade.get_favorite_games(current_user_id)
+        return {'success': True, 'data': favorites}, 200
+
+    @jwt_required()
+    @api.expect(favorite_game_model, validate=True)
+    @api.response(201, 'Jeu ajouté aux favoris')
+    @api.response(400, 'Jeu déjà en favori ou introuvable')
+    def post(self):
+
+        current_user_id = get_jwt_identity()
+        data = api.payload
+
+        favorite, error = facade.add_favorite_game(current_user_id, data['game_id'])
+        if error:
+            return {'error': error}, 400
+
+        return {'success': True, 'data': favorite}, 201
+
+
+
+@api.route('/me/favorite-games/<game_id>')
+class MyFavoriteGameResource(Resource):
+
+    @jwt_required()
+    @api.response(200, 'Jeu retiré des favoris')
+    @api.response(400, 'Jeu introuvable dans les favoris')
+    def delete(self, game_id):
+
+        current_user_id = get_jwt_identity()
+
+        result, error = facade.remove_favorite_game(current_user_id, game_id)
+        if error:
+            return {'error': error}, 400
+
+        return {'success': True, 'message': 'Jeu retiré des favoris'}, 200
