@@ -10,7 +10,7 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     
     # Configuration DB
-    DB_HOST = os.getenv('DB_HOST', 'localhost')
+    DB_HOST = os.getenv('DB_HOST', '127.0.0.1')
     DB_USER = os.getenv('DB_USER', 'dev_user')
     DB_PASSWORD = os.getenv('DB_PASSWORD', '')
     DB_NAME = 'boardgame_meetup'
