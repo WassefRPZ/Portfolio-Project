@@ -11,7 +11,7 @@ class Config:
     
     # Configuration DB
     DB_HOST = os.getenv('DB_HOST', 'localhost')
-    DB_USER = os.getenv('DB_USER', 'root')
+    DB_USER = os.getenv('DB_USER', 'dev_user')
     DB_PASSWORD = os.getenv('DB_PASSWORD', '')
     DB_NAME = 'boardgame_meetup'
     
