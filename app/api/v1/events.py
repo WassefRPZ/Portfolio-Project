@@ -70,8 +70,12 @@ def update_event(current_user_id, event_id):
     Headers: Authorization: Bearer <token>
     Body: { champs à modifier }
     """
-    # TODO: Implémenter la modification d'événement
-    return jsonify({"success": False, "error": "Fonctionnalité à venir"}), 501
+    data = request.get_json()
+    
+    # Appel à la nouvelle méthode facade.update_event
+    response, status_code = facade.update_event(event_id, current_user_id, data)
+    
+    return jsonify(response), status_code
 
 @events_ns.route('/<event_id>', methods=['DELETE'])
 @token_required
@@ -80,8 +84,10 @@ def cancel_event(current_user_id, event_id):
     DELETE /api/v1/events/<event_id>
     Headers: Authorization: Bearer <token>
     """
-    # TODO: Implémenter l'annulation d'événement
-    return jsonify({"success": False, "error": "Fonctionnalité à venir"}), 501
+    # Appel à la nouvelle méthode facade.cancel_event
+    response, status_code = facade.cancel_event(event_id, current_user_id)
+    
+    return jsonify(response), status_code
 
 @events_ns.route('/<event_id>/join', methods=['POST'])
 @token_required
@@ -118,7 +124,7 @@ def get_event_comments(current_user_id, event_id):
     GET /api/v1/events/<event_id>/comments
     Headers: Authorization: Bearer <token> (optionnel)
     """
-    # TODO: Implémenter la récupération des commentaires
+    # TODO: Implémenter la récupération des commentaires (Fonctionnalité "Could Have")
     return jsonify({"success": True, "data": []}), 200
 
 @events_ns.route('/<event_id>/comments', methods=['POST'])
@@ -129,5 +135,5 @@ def add_event_comment(current_user_id, event_id):
     Headers: Authorization: Bearer <token>
     Body: { "content" }
     """
-    # TODO: Implémenter l'ajout de commentaire
+    # TODO: Implémenter l'ajout de commentaire (Fonctionnalité "Could Have")
     return jsonify({"success": False, "error": "Fonctionnalité à venir"}), 501
