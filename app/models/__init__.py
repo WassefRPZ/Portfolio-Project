@@ -1,9 +1,7 @@
 from datetime import datetime
 from app import db
 
-# ==========================================
 # Model User
-# ==========================================
 class User(db.Model):
     __tablename__ = 'users'
     
@@ -36,9 +34,7 @@ class User(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
-# ==========================================
 # Model Game
-# ==========================================
 class Game(db.Model):
     __tablename__ = 'games'
     
@@ -47,7 +43,7 @@ class Game(db.Model):
     description = db.Column(db.Text)
     min_players = db.Column(db.Integer, nullable=False)
     max_players = db.Column(db.Integer, nullable=False)
-    play_time = db.Column(db.Integer, nullable=False)  # en minutes
+    play_time = db.Column(db.Integer, nullable=False)
     image_url = db.Column(db.String(255))
     
     # Relations
@@ -65,9 +61,7 @@ class Game(db.Model):
             "image_url": self.image_url
         }
 
-# ==========================================
 # Model Event
-# ==========================================
 class Event(db.Model):
     __tablename__ = 'events'
     
@@ -112,9 +106,7 @@ class Event(db.Model):
             
         return data
 
-# ==========================================
 # Model EventParticipant
-# ==========================================
 class EventParticipant(db.Model):
     __tablename__ = 'event_participants'
     
@@ -133,9 +125,7 @@ class EventParticipant(db.Model):
             "joined_at": self.joined_at.isoformat() if self.joined_at else None
         }
 
-# ==========================================
 # Model Comment
-# ==========================================
 class Comment(db.Model):
     __tablename__ = 'comments'
     
@@ -154,9 +144,7 @@ class Comment(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
-# ==========================================
 # Model Friendship
-# ==========================================
 class Friendship(db.Model):
     __tablename__ = 'friendships'
     
@@ -177,9 +165,7 @@ class Friendship(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
 
-# ==========================================
 # Model FavoriteGame
-# ==========================================
 class FavoriteGame(db.Model):
     __tablename__ = 'favorite_games'
     
@@ -194,9 +180,7 @@ class FavoriteGame(db.Model):
             "added_at": self.added_at.isoformat() if self.added_at else None
         }
 
-# ==========================================
 # Model Review
-# ==========================================
 class Review(db.Model):
     __tablename__ = 'reviews'
     
@@ -219,9 +203,7 @@ class Review(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
-# ==========================================
 # Model Notification
-# ==========================================
 class Notification(db.Model):
     __tablename__ = 'notifications'
     

@@ -7,6 +7,7 @@ Façade centrale qui coordonne tous les services
 import uuid
 import bcrypt
 from datetime import datetime
+import requests
 from app import db
 from app.models import User, Event, Game, EventParticipant, Comment, Friendship, FavoriteGame, Review, Notification
 from sqlalchemy import or_, and_
@@ -333,6 +334,55 @@ class BoardGameFacade:
             db.session.rollback()
             print(f"Erreur leave event: {e}")
             return None, str(e)
+
+    def update_event(self, event_id, user_id, data):
+        """Met à jour un événement si l'utilisateur est le créateur"""
+        try:
+            event = Event.query.filter_by(event_id=event_id).first()
+            
+            if not event:
+                return {"error": "Événement introuvable"}, 404
+            
+            if event.creator_id != user_id:
+                return {"error": "Non autorisé. Vous n'êtes pas le créateur."}, 403
+            
+            # Champs autorisés à la modification
+            allowed_fields = ['title', 'description', 'location_text', 'max_participants']
+            
+            for field in allowed_fields:
+                if field in data:
+                    setattr(event, field, data[field])
+            
+            # Cas spécial pour la date
+            if 'event_start' in data:
+                event.event_start = datetime.fromisoformat(data['event_start'])
+            
+            db.session.commit()
+            return event.to_dict(), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}, 500
+
+    def cancel_event(self, event_id, user_id):
+        """Annule un événement"""
+        try:
+            event = Event.query.filter_by(event_id=event_id).first()
+            
+            if not event:
+                return {"error": "Événement introuvable"}, 404
+            
+            if event.creator_id != user_id:
+                return {"error": "Non autorisé."}, 403
+            
+            event.status = 'cancelled'
+            db.session.commit()
+            
+            return {"message": "Événement annulé avec succès"}, 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}, 500
     
     # ==========================================
     # GESTION DES AMIS
@@ -505,20 +555,38 @@ class BoardGameFacade:
         Rechercher des jeux (d'abord en local, sinon API externe)
         """
         try:
-            # Chercher d'abord en local
+            # 1. Recherche locale
             local_games = Game.query.filter(
                 Game.name.like(f'%{query}%')
-            ).limit(10).all()
+            ).limit(5).all()
             
-            if local_games:
-                return [g.to_dict() for g in local_games]
+            results = [g.to_dict() for g in local_games]
             
-            # TODO: Si pas de résultats locaux, appeler l'API BoardGameAtlas
-            # Pour le MVP, on retourne juste la recherche locale
-            return []
+            # 2. Si peu de résultats, appel API externe (BoardGameAtlas simulation)
+            if len(results) < 5:
+                # Exemple d'appel (client_id fictif pour l'exemple)
+                CLIENT_ID = "JLBr5npPhV" 
+                url = f"https://api.boardgameatlas.com/api/search?name={query}&client_id={CLIENT_ID}&limit=10"
+                
+                try:
+                    response = requests.get(url, timeout=3)
+                    if response.status_code == 200:
+                        data = response.json().get('games', [])
+                        for game in data:
+                            results.append({
+                                "game_id": f"ext_{game['id']}",
+                                "name": game['name'],
+                                "description": game.get('description_preview', ''),
+                                "min_players": game.get('min_players'),
+                                "max_players": game.get('max_players'),
+                                "play_time": game.get('max_playtime'),
+                                "image_url": game.get('image_url')
+                            })
+                except Exception:
+                    pass # Si l'API échoue, on garde juste les résultats locaux
+
+            return results
             
         except Exception as e:
             print(f"Erreur search games: {e}")
             return []
-
-
