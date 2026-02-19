@@ -1,9 +1,6 @@
 from datetime import datetime
 from app import db
 
-# ==========================================
-# Model User
-# ==========================================
 class User(db.Model):
     __tablename__ = 'users'
     
@@ -18,12 +15,6 @@ class User(db.Model):
     profile_image_url = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relations
-    events_created = db.relationship('Event', backref='creator', lazy=True, foreign_keys='Event.creator_id')
-    participations = db.relationship('EventParticipant', backref='participant', lazy=True)
-    comments = db.relationship('Comment', backref='author', lazy=True)
-    favorite_games = db.relationship('FavoriteGame', backref='user', lazy=True)
-    
     def to_dict(self):
         return {
             "user_id": self.user_id,
@@ -36,9 +27,7 @@ class User(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
-# ==========================================
-# Model Game
-# ==========================================
+
 class Game(db.Model):
     __tablename__ = 'games'
     
@@ -47,12 +36,8 @@ class Game(db.Model):
     description = db.Column(db.Text)
     min_players = db.Column(db.Integer, nullable=False)
     max_players = db.Column(db.Integer, nullable=False)
-    play_time = db.Column(db.Integer, nullable=False)  # en minutes
+    play_time = db.Column(db.Integer, nullable=False)
     image_url = db.Column(db.String(255))
-    
-    # Relations
-    events = db.relationship('Event', backref='game', lazy=True)
-    favorites = db.relationship('FavoriteGame', backref='game', lazy=True)
     
     def to_dict(self):
         return {
@@ -65,9 +50,7 @@ class Game(db.Model):
             "image_url": self.image_url
         }
 
-# ==========================================
-# Model Event
-# ==========================================
+
 class Event(db.Model):
     __tablename__ = 'events'
     
@@ -85,9 +68,7 @@ class Event(db.Model):
     status = db.Column(db.Enum('open', 'full', 'cancelled', 'completed'), default='open')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relations
     participants = db.relationship('EventParticipant', backref='event', lazy=True, cascade='all, delete-orphan')
-    comments = db.relationship('Comment', backref='event', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self, include_participants=False):
         data = {
@@ -112,9 +93,7 @@ class Event(db.Model):
             
         return data
 
-# ==========================================
-# Model EventParticipant
-# ==========================================
+
 class EventParticipant(db.Model):
     __tablename__ = 'event_participants'
     
@@ -133,9 +112,7 @@ class EventParticipant(db.Model):
             "joined_at": self.joined_at.isoformat() if self.joined_at else None
         }
 
-# ==========================================
-# Model Comment
-# ==========================================
+
 class Comment(db.Model):
     __tablename__ = 'comments'
     
@@ -154,9 +131,7 @@ class Comment(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
-# ==========================================
-# Model Friendship
-# ==========================================
+
 class Friendship(db.Model):
     __tablename__ = 'friendships'
     
@@ -173,13 +148,10 @@ class Friendship(db.Model):
             "user_id_2": self.user_id_2,
             "action_user_id": self.action_user_id,
             "status": self.status,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
-# ==========================================
-# Model FavoriteGame
-# ==========================================
+
 class FavoriteGame(db.Model):
     __tablename__ = 'favorite_games'
     
@@ -192,54 +164,4 @@ class FavoriteGame(db.Model):
             "user_id": self.user_id,
             "game_id": self.game_id,
             "added_at": self.added_at.isoformat() if self.added_at else None
-        }
-
-# ==========================================
-# Model Review
-# ==========================================
-class Review(db.Model):
-    __tablename__ = 'reviews'
-    
-    review_id = db.Column(db.String(50), primary_key=True)
-    event_id = db.Column(db.String(50), db.ForeignKey('events.event_id'), nullable=False)
-    reviewer_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
-    target_user_id = db.Column(db.String(50), db.ForeignKey('users.user_id'))
-    rating = db.Column(db.SmallInteger, nullable=False)  # 1-5
-    comment = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def to_dict(self):
-        return {
-            "review_id": self.review_id,
-            "event_id": self.event_id,
-            "reviewer_id": self.reviewer_id,
-            "target_user_id": self.target_user_id,
-            "rating": self.rating,
-            "comment": self.comment,
-            "created_at": self.created_at.isoformat() if self.created_at else None
-        }
-
-# ==========================================
-# Model Notification
-# ==========================================
-class Notification(db.Model):
-    __tablename__ = 'notifications'
-    
-    notification_id = db.Column(db.String(50), primary_key=True)
-    user_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
-    type = db.Column(db.String(50), nullable=False)
-    message = db.Column(db.String(255), nullable=False)
-    reference_id = db.Column(db.String(50))
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def to_dict(self):
-        return {
-            "notification_id": self.notification_id,
-            "user_id": self.user_id,
-            "type": self.type,
-            "message": self.message,
-            "reference_id": self.reference_id,
-            "is_read": self.is_read,
-            "created_at": self.created_at.isoformat() if self.created_at else None
         }
