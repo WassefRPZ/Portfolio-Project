@@ -1,4 +1,5 @@
 import mysql.connector
+from werkzeug.security import generate_password_hash
 
 DB_CONFIG = {
     'host': '127.0.0.1',
@@ -128,14 +129,16 @@ def main():
         FOREIGN KEY (game_id) REFERENCES games(game_id) ON DELETE CASCADE
     )
     """)
+
+    pw_hash = generate_password_hash('password123')
     
     # Données de test
     cursor.execute("""
     INSERT INTO users (user_id, username, email, password_hash, role ,city, region, bio) VALUES
-    ('usr_001', 'Nina', 'nina@test.com', 'password123', 'admin', 'Saint Raphael', 'PACA', 'Passionnée de jeux'),
-    ('usr_002', 'Wassef', 'wassef@test.com', 'password123', 'admin', 'Frejus', 'PACA', 'Dev et gamer'),
-    ('usr_003', 'Warren', 'warren@test.com', 'password123', 'admin', 'Paris', 'IDF', 'Fan de stratégie')
-    """)
+    ('usr_001', 'Nina', 'nina@test.com', %s, 'admin', 'Saint Raphael', 'PACA', 'Passionnée de jeux'),
+    ('usr_002', 'Wassef', 'wassef@test.com', %s, 'admin', 'Frejus', 'PACA', 'Dev et gamer'),
+    ('usr_003', 'Warren', 'warren@test.com', %s, 'admin', 'Paris', 'IDF', 'Fan de stratégie')
+    """, (pw_hash, pw_hash, pw_hash))
     
     cursor.execute("""
     INSERT INTO games (game_id, name, description, min_players, max_players, play_time, image_url) VALUES
