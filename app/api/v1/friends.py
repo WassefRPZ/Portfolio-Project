@@ -13,16 +13,18 @@ facade = BoardGameFacade()
 @jwt_required()
 def get_my_friends():
     """
-Get my friends
----
-tags:
-  - Friends
-security:
-  - Bearer: []
-responses:
-  200:
-    description: List of friends
-"""
+    Get my friends
+    ---
+    tags:
+      - Friends
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: List of friends
+      401:
+        description: Unauthorized
+    """
     current_user_id = get_jwt_identity()
 
     friends = facade.get_friends(current_user_id)
@@ -36,16 +38,25 @@ responses:
 @jwt_required()
 def get_friend_requests():
     """
-Get pending friend requests
----
-tags:
-  - Friends
-security:
-  - Bearer: []
-responses:
-  200:
-    description: Pending requests
-"""
+    Get my friend requests
+    ---
+    tags:
+      - Friends
+    security:
+      - Bearer: []
+    parameters:
+      - in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+        description: "Bearer JWT token. Format: Bearer <token>"
+    responses:
+      200:
+        description: "List of friend requests"
+      401:
+        description: "Unauthorized"
+    """
     current_user_id = get_jwt_identity()
 
     requests_list = facade.get_pending_requests(current_user_id)

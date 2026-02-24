@@ -22,10 +22,11 @@ security:
   - Bearer: []
 responses:
   200:
-    description: User profile
+    description: OK
   401:
     description: Unauthorized
 """
+
     current_user_id = get_jwt_identity()
 
     user = facade.get_user(current_user_id)
@@ -131,7 +132,7 @@ def search_users():
 @jwt_required()
 def get_user_profile(user_id):
     """
-    Get another user's profile
+    Get user profile
     ---
     tags:
       - Users
@@ -142,11 +143,10 @@ def get_user_profile(user_id):
         in: path
         type: string
         required: true
+        description: ID of the user
     responses:
       200:
-        description: User profile
-      404:
-        description: User not found
+        description: OK
     """
     user = facade.get_user(user_id)
     if not user:
@@ -162,16 +162,22 @@ def get_user_profile(user_id):
 @jwt_required()
 def get_my_events():
     """
-Get my events
----
-tags:
-  - Users
-security:
-  - Bearer: []
-responses:
-  200:
-    description: User events
-"""
+    Get my events
+    ---
+    tags:
+      - Users
+    security:
+      - Bearer: []
+    parameters:
+      - name: status
+        in: query
+        type: string
+        required: false
+        description: Filter events by status (open, full, cancelled, completed)
+    responses:
+      200:
+        description: OK
+    """
 
     current_user_id = get_jwt_identity()
 
@@ -210,29 +216,26 @@ responses:
 @jwt_required()
 def add_favorite_game():
     """
-Add favorite game
----
-tags:
-  - Users
-security:
-  - Bearer: []
-consumes:
-  - application/json
-parameters:
-  - in: body
-    name: body
-    required: true
-    schema:
-      type: object
-      required:
-        - game_id
-      properties:
-        game_id:
-          type: string
-responses:
-  201:
-    description: Favorite added
-"""
+    Add favorite game
+    ---
+    tags:
+      - Users
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            game_id:
+              type: string
+              example: "game_123"
+    responses:
+      201:
+        description: Game added
+    """
     current_user_id = get_jwt_identity()
     data = request.get_json()
 

@@ -1,16 +1,25 @@
 import mysql.connector
+import uuid
 
 DB_CONFIG = {
     'host': '127.0.0.1',
     'user': 'dev_user',
-    'password': '',
+    'password': 'dev123',
     'database': 'boardgame_meetup'
 }
 
+# 5 jeux populaires avec game_id fixe
+POPULAR_GAMES = [
+    ("clue_001", "Clue", "Jeu d'enquete et de deduction", 3, 6, 60),
+    ("catan_001", "Catan", "Jeu de strategie et de commerce", 3, 4, 90),
+    ("pandemic_001", "Pandemic", "Jeu cooperatif contre les maladies", 2, 4, 45),
+    ("carcassonne_001", "Carcassonne", "Jeu de placement de tuiles medieval", 2, 5, 45),
+    ("azul_001", "Azul", "Jeu de placement de tuiles", 2, 4, 45)
+]
+
 def main():
-    print("🗄️  Initialisation de la base de données...")
+    print("Initialisation de la base de donnees...")
     
-    # Connexion sans spécifier la database
     conn = mysql.connector.connect(
         host=DB_CONFIG['host'],
         user=DB_CONFIG['user'],
@@ -18,12 +27,11 @@ def main():
     )
     cursor = conn.cursor()
     
-    # Supprimer et recréer la database
     cursor.execute(f"DROP DATABASE IF EXISTS {DB_CONFIG['database']}")
     cursor.execute(f"CREATE DATABASE {DB_CONFIG['database']}")
     cursor.execute(f"USE {DB_CONFIG['database']}")
     
-    # Table users
+    # Création de la table users
     cursor.execute("""
     CREATE TABLE users (
         user_id VARCHAR(50) PRIMARY KEY,
@@ -39,7 +47,7 @@ def main():
     )
     """)
     
-    # Table games
+    # Création de la table games
     cursor.execute("""
     CREATE TABLE games (
         game_id VARCHAR(50) PRIMARY KEY,
@@ -52,108 +60,31 @@ def main():
     )
     """)
     
-    # Table events
-    cursor.execute("""
-    CREATE TABLE events (
-        event_id VARCHAR(50) PRIMARY KEY,
-        creator_id VARCHAR(50) NOT NULL,
-        game_id VARCHAR(50) NOT NULL,
-        title VARCHAR(200) NOT NULL,
-        description TEXT,
-        city VARCHAR(100) NOT NULL,
-        location_text VARCHAR(255) NOT NULL,
-        latitude DECIMAL(10, 8),
-        longitude DECIMAL(11, 8),
-        event_start DATETIME NOT NULL,
-        max_participants INT NOT NULL,
-        status ENUM('open', 'full', 'cancelled', 'completed') DEFAULT 'open',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (creator_id) REFERENCES users(user_id) ON DELETE CASCADE,
-        FOREIGN KEY (game_id) REFERENCES games(game_id)
-    )
-    """)
+    print("Tables creees")
     
-    # Table event_participants
-    cursor.execute("""
-    CREATE TABLE event_participants (
-        participant_id VARCHAR(50) PRIMARY KEY,
-        event_id VARCHAR(50) NOT NULL,
-        user_id VARCHAR(50) NOT NULL,
-        status ENUM('confirmed', 'waitlist', 'cancelled') DEFAULT 'confirmed',
-        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-        UNIQUE KEY unique_participation (event_id, user_id)
-    )
-    """)
-    
-    # Table comments
-    cursor.execute("""
-    CREATE TABLE comments (
-        comment_id VARCHAR(50) PRIMARY KEY,
-        event_id VARCHAR(50) NOT NULL,
-        user_id VARCHAR(50) NOT NULL,
-        content TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-    )
-    """)
-    
-    # Table friendships
-    cursor.execute("""
-    CREATE TABLE friendships (
-        user_id_1 VARCHAR(50) NOT NULL,
-        user_id_2 VARCHAR(50) NOT NULL,
-        action_user_id VARCHAR(50) NOT NULL,
-        status ENUM('pending', 'accepted', 'declined', 'blocked') DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (user_id_1, user_id_2),
-        CONSTRAINT chk_users_order CHECK (user_id_1 < user_id_2),
-        FOREIGN KEY (user_id_1) REFERENCES users(user_id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id_2) REFERENCES users(user_id) ON DELETE CASCADE,
-        FOREIGN KEY (action_user_id) REFERENCES users(user_id) ON DELETE CASCADE
-    )
-    """)
-    
-    # Table favorite_games
-    cursor.execute("""
-    CREATE TABLE favorite_games (
-        user_id VARCHAR(50) NOT NULL,
-        game_id VARCHAR(50) NOT NULL,
-        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (user_id, game_id),
-        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-        FOREIGN KEY (game_id) REFERENCES games(game_id) ON DELETE CASCADE
-    )
-    """)
-    
-    # Données de test
+    # Insertion des utilisateurs de test
     cursor.execute("""
     INSERT INTO users (user_id, username, email, password_hash, city, region, bio) VALUES
-    ('usr_001', 'Nina', 'nina@test.com', 'scrypt:32768:8:1$fakehash1', 'Saint Raphael', 'PACA', 'Passionnée de jeux'),
+    ('usr_001', 'Nina', 'nina@test.com', 'scrypt:32768:8:1$fakehash1', 'Saint Raphael', 'PACA', 'Passionnee de jeux'),
     ('usr_002', 'Wassef', 'wassef@test.com', 'scrypt:32768:8:1$fakehash2', 'Frejus', 'PACA', 'Dev et gamer'),
-    ('usr_003', 'Warren', 'warren@test.com', 'scrypt:32768:8:1$fakehash3', 'Paris', 'IDF', 'Fan de stratégie')
+    ('usr_003', 'Warren', 'warren@test.com', 'scrypt:32768:8:1$fakehash3', 'Paris', 'IDF', 'Fan de strategie')
     """)
     
-    cursor.execute("""
-    INSERT INTO games (game_id, name, description, min_players, max_players, play_time, image_url) VALUES
-    ('game_001', 'Catan', 'Jeu de stratégie et de commerce', 3, 4, 90, 'https://example.com/catan.jpg'),
-    ('game_002', 'Azul', 'Jeu de placement de tuiles', 2, 4, 45, 'https://example.com/azul.jpg'),
-    ('game_003', '7 Wonders', 'Développement de civilisation', 2, 7, 30, 'https://example.com/7wonders.jpg')
-    """)
-    
-    cursor.execute("""
-    INSERT INTO events (event_id, creator_id, game_id, title, description, city, location_text, event_start, max_participants) VALUES
-    ('evt_001', 'usr_001', 'game_001', 'Soirée Catan', 'On cherche 2 joueurs', 'Saint Raphael', 'Bar à Jeux', '2026-03-15 19:00:00', 4)
-    """)
+    print("Ajout de 5 jeux populaires...")
+    for game_id, name, description, min_p, max_p, time in POPULAR_GAMES:
+        cursor.execute("""
+            INSERT INTO games (game_id, name, description, min_players, max_players, play_time, image_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (game_id, name, description, min_p, max_p, time, f"https://via.placeholder.com/300x300?text={name.replace(' ', '+')}"))
     
     conn.commit()
     cursor.close()
     conn.close()
     
-    print("Base de données créée avec succès!")
+    print("=" * 60)
+    print("Base de donnees creee avec succes!")
+    print(f"Total: 3 utilisateurs, 5 jeux")
+    print("=" * 60)
 
 if __name__ == '__main__':
     main()
