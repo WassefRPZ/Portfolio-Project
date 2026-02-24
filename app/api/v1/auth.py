@@ -63,7 +63,8 @@ responses:
         identity=str(user['user_id']),
         additional_claims={
             'username': user['username'],
-            'email': user['email']
+            'email': user['email'],
+            'is_admin': user.get('is_admin', False)
         }
     )
 
@@ -130,7 +131,8 @@ def login():
         identity=str(user['user_id']),
         additional_claims={
             'username': user['username'],
-            'email': user['email']
+            'email': user['email'],
+            'is_admin': user.get('is_admin', False)
         }
     )
 

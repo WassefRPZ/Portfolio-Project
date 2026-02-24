@@ -24,7 +24,7 @@ class User:
         Convertit les objets datetime en chaînes de caractères (ISO format).
         """
         return {
-            "id": self.id,
+            "user_id": self.id,
             "email": self.email,
             "username": self.username,
             "first_name": self.first_name,

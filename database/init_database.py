@@ -131,10 +131,10 @@ def main():
     
     # Données de test
     cursor.execute("""
-    INSERT INTO users (user_id, username, email, password_hash, city, region, bio) VALUES
-    ('usr_001', 'Nina', 'nina@test.com', 'password123', 'Saint Raphael', 'PACA', 'Passionnée de jeux'),
-    ('usr_002', 'Wassef', 'wassef@test.com', 'password123', 'Frejus', 'PACA', 'Dev et gamer'),
-    ('usr_003', 'Warren', 'warren@test.com', 'password123', 'Paris', 'IDF', 'Fan de stratégie')
+    INSERT INTO users (user_id, username, email, password_hash, role ,city, region, bio) VALUES
+    ('usr_001', 'Nina', 'nina@test.com', 'password123', 'admin', 'Saint Raphael', 'PACA', 'Passionnée de jeux'),
+    ('usr_002', 'Wassef', 'wassef@test.com', 'password123', 'admin', 'Frejus', 'PACA', 'Dev et gamer'),
+    ('usr_003', 'Warren', 'warren@test.com', 'password123', 'admin', 'Paris', 'IDF', 'Fan de stratégie')
     """)
     
     cursor.execute("""
