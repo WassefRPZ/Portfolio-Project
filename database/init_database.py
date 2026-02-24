@@ -8,7 +8,7 @@ DB_CONFIG = {
 }
 
 def main():
-    print("🗄️  Initialisation de la base de données...")
+    print("  Initialisation de la base de données...")
     
     # Connexion sans spécifier la database
     conn = mysql.connector.connect(
@@ -132,9 +132,9 @@ def main():
     # Données de test
     cursor.execute("""
     INSERT INTO users (user_id, username, email, password_hash, city, region, bio) VALUES
-    ('usr_001', 'Nina', 'nina@test.com', 'scrypt:32768:8:1$fakehash1', 'Saint Raphael', 'PACA', 'Passionnée de jeux'),
-    ('usr_002', 'Wassef', 'wassef@test.com', 'scrypt:32768:8:1$fakehash2', 'Frejus', 'PACA', 'Dev et gamer'),
-    ('usr_003', 'Warren', 'warren@test.com', 'scrypt:32768:8:1$fakehash3', 'Paris', 'IDF', 'Fan de stratégie')
+    ('usr_001', 'Nina', 'nina@test.com', 'password123', 'Saint Raphael', 'PACA', 'Passionnée de jeux'),
+    ('usr_002', 'Wassef', 'wassef@test.com', 'password123', 'Frejus', 'PACA', 'Dev et gamer'),
+    ('usr_003', 'Warren', 'warren@test.com', 'password123', 'Paris', 'IDF', 'Fan de stratégie')
     """)
     
     cursor.execute("""

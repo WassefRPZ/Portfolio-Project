@@ -1,34 +1,21 @@
-<<<<<<< HEAD
-from app import create_app
+from app import create_app, db
+import app.models
 
+# Crée l'application en utilisant la configuration définie dans config.py
 app = create_app()
 
 if __name__ == '__main__':
-    print("Board Game Meetup API")
-    print("http://127.0.0.1:5000")
-    print("Routes disponibles sur /api/v1/")
+    print(" Démarrage du système...")
+
+    # Bloc magique : Crée les tables si elles n'existent pas
+    with app.app_context():
+        try:
+            db.create_all()
+            print(" Base de données & Tables synchronisées avec succès.")
+        except Exception as e:
+            print(f" Erreur lors de la création des tables : {e}")
+            print("Assure-toi que la base de données 'boardgame_meetup' existe bien dans MySQL.")
+    
+    print(" Serveur accessible sur : http://127.0.0.1:5000/api/v1/")
+    print(" Documentation Swagger : http://127.0.0.1:5000/apidocs/")
     app.run(debug=True, port=5000)
-
-
-
-
-
-
-
-
-
-
-
-
-=======
-from app import create_app
-
-# Création de l'application via la factory function définie dans app/__init__.py
-app = create_app()
-
-if __name__ == '__main__':
-    # Lancement du serveur de développement Flask
-    # debug=True permet le rechargement automatique quand tu modifies le code
-    # host='0.0.0.0' rend le serveur accessible depuis l'extérieur (utile si tu utilises Docker ou une VM)
-    app.run(debug=True, host='0.0.0.0', port=5000)
->>>>>>> origin/feature/database
