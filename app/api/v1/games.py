@@ -147,33 +147,43 @@ def create_game():
       - Games
     security:
       - Bearer: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - name
-              - min_players
-              - max_players
-              - play_time
-            properties:
-              name:
-                type: string
-              description:
-                type: string
-              min_players:
-                type: integer
-              max_players:
-                type: integer
-              play_time:
-                type: integer
-              image_url:
-                type: string
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - name
+            - min_players
+            - max_players
+            - play_time
+          properties:
+            name:
+              type: string
+              example: "Catan"
+            description:
+              type: string
+              example: "Jeu de stratégie"
+            min_players:
+              type: integer
+              example: 3
+            max_players:
+              type: integer
+              example: 4
+            play_time:
+              type: integer
+              example: 90
+            image_url:
+              type: string
+              example: "http://image.com/catan.jpg"
     responses:
       201:
         description: Game created
+      400:
+        description: Invalid input
       403:
         description: Admin only
     """
@@ -185,21 +195,22 @@ def create_game():
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 
-    # Champs obligatoires selon la table games
+
     required = ['name', 'min_players', 'max_players', 'play_time']
     for field in required:
         if field not in data:
             return jsonify({"error": f"Champ '{field}' manquant"}), 400
 
-    # Vérifier cohérence joueurs
+
     if data['min_players'] > data['max_players']:
         return jsonify({"error": "min_players ne peut pas dépasser max_players"}), 400
 
-    existing = facade.get_game_by_name(data['name'])
-    if existing:
-        return jsonify({"error": "Ce jeu existe déjà"}), 400
-
     try:
+        existing = facade.get_game_by_name(data['name'])
+        if existing:
+            return jsonify({"error": "Ce jeu existe déjà"}), 400
+
+
         new_game = facade.create_game(data)
         return jsonify({"success": True, "data": new_game}), 201
     except Exception as e:

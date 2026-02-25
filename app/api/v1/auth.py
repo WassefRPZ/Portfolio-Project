@@ -58,13 +58,14 @@ responses:
     if error:
         return jsonify({"error": error}), 400
 
-    # Vrai token JWT
+
     access_token = create_access_token(
         identity=str(user['user_id']),
         additional_claims={
             'username': user['username'],
             'email': user['email'],
-            'is_admin': user.get('is_admin', False)
+            # On vérifie si le rôle est 'admin'
+            'is_admin': (user.get('role') == 'admin') 
         }
     )
 
@@ -126,13 +127,14 @@ def login():
     if not user:
         return jsonify({"error": "Email ou mot de passe incorrect"}), 401
 
-    # Vrai token JWT
+
     access_token = create_access_token(
         identity=str(user['user_id']),
         additional_claims={
             'username': user['username'],
             'email': user['email'],
-            'is_admin': user.get('is_admin', False)
+            # On vérifie si le rôle est 'admin'
+            'is_admin': (user.get('role') == 'admin') 
         }
     )
 
