@@ -160,6 +160,9 @@ class BoardGameFacade:
         game = Game.query.filter_by(game_id=data['game_id']).first()
         if not game:
             return {"error": "Ce jeu n'existe pas"}
+        
+        if not data.get('title') or not data.get('city') or not data.get('date'):
+            return {"error": "Champs requis manquants"}
 
         event = Event(
             event_id=f"evt_{uuid.uuid4().hex[:8]}",
@@ -169,8 +172,8 @@ class BoardGameFacade:
             description=data.get('description', ''),
             city=data['city'],
             location_text=data['location_text'],
-            latitude=data.get('latitude'),
-            longitude=data.get('longitude'),
+            latitude=None,
+            longitude=None,
             event_start=datetime.fromisoformat(data['event_start']),
             max_participants=data['max_participants']
         )

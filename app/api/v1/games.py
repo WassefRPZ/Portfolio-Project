@@ -219,7 +219,6 @@ def create_game():
 
 # -----------------------------------------------
 # PUT /games/<game_id> → modifier un jeu (admin seulement)
-# Body: champs à modifier
 # -----------------------------------------------
 @api_v1.route('/games/<game_id>', methods=['PUT'])
 @jwt_required()

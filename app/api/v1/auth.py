@@ -8,7 +8,7 @@ facade = BoardGameFacade()
 
 # -----------------------------------------------
 # POST /auth/register
-# Body: { username, email, password, city, region?, bio? }
+# Body: { username, email, password, city, region, bio }
 # -----------------------------------------------
 @api_v1.route('/auth/register', methods=['POST'])
 def register():

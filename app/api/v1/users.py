@@ -8,7 +8,6 @@ facade = BoardGameFacade()
 
 # -----------------------------------------------
 # GET /users/me → voir son propre profil
-# Retourne : user + ses jeux favoris (géré dans facade.get_user)
 # -----------------------------------------------
 @api_v1.route('/users/me', methods=['GET'])
 @jwt_required()

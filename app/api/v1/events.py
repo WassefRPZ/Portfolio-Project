@@ -8,7 +8,6 @@ facade = BoardGameFacade()
 
 # -----------------------------------------------
 # GET /events → liste des événements
-# Filtres optionnels : ?city=Paris&date=2026-03-01
 # -----------------------------------------------
 @api_v1.route('/events', methods=['GET'])
 def list_events():
@@ -134,7 +133,6 @@ def get_event(event_id):
 
 # -----------------------------------------------
 # PUT /events/<event_id> → modifier un événement
-# Seulement le créateur peut modifier
 # -----------------------------------------------
 @api_v1.route('/events/<event_id>', methods=['PUT'])
 @jwt_required()
@@ -184,7 +182,6 @@ def update_event(event_id):
 
 # -----------------------------------------------
 # DELETE /events/<event_id> → annuler un événement
-# Seulement le créateur peut annuler
 # -----------------------------------------------
 @api_v1.route('/events/<event_id>', methods=['DELETE'])
 @jwt_required()
