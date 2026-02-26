@@ -1,101 +1,71 @@
-# Portfolio Backend API
+# Le README.md
 
-Backend API Python pour gérer un portfolio professionnel avec gestion des utilisateurs, projets, compétences et expériences.
+# BoardGame
 
-## Structure du Projet
+Backend de l'application BoardGame Hub, une plateforme sociale pour organiser des soirées jeux de société. Ce projet expose une API RESTful développée avec Flask.
 
-### Dossiers
+## Fonctionnalités
 
-- **app/** - Cœur de l'application
-  - **api/v1/** - Endpoints API version 1 
-  - **models/** - Modèles de données
-  - **services/** - Logique métier et façade pour les services
-  - **persistence/** - Gestion de la persistance des données et repository
+- **Authentification** : Inscription, Connexion (JWT).
+- **Événements** : Création, recherche (par ville/date), participation, annulation.
+- **Utilisateurs** : Profils, gestion d'amis, jeux favoris.
+- **Jeux** : Catalogue de jeux, recherche.
+- **Social** : Commentaires sur les événements.
 
-- **config/** - Configuration de l'application
-- **utils/** - Utilitaires et fonctions helper
-- **database/** - Gestion de la base de données
-- **tests/** - Tests unitaires et d'intégration
+##  Stack Technique
 
-### Fichiers racine
+- **Langage** : Python 3.x
+- **Framework** : Flask
+- **Base de données** : MySQL
+- **ORM** : SQLAlchemy
+- **Documentation API** : Flasgger (Swagger UI)
 
-- **run.py** - Point d'entrée principal de l'application
-- **config.py** - Configuration globale (variables d'environnement, paramètres)
-- **requirements.txt** - Dépendances Python
-- **# Board Game Meetup - Application
+## Installation
 
-Application pour mettre en relation les amateurs de jeux de société et organiser des rencontres.
+### 1. Prérequis
+- Python 3.8 ou supérieur
+- MySQL Server installé et lancé
 
-## 📁 Structure du Projet
+### 2. Cloner le projet
+```bash
+git clone [https://github.com/ton-repo/portfolio-project.git](https://github.com/ton-repo/portfolio-project.git)
+cd portfolio-project
 
-```
-Portfolio-Project/
-├── app/                          # Application principale (Python/Flask)
-│   ├── __init__.py
-│   ├── api/                      # Routes et endpoints API
-│   │   ├── __init__.py
-│   │   └── v1/                   # Version 1 de l'API
-│   ├── models/                   # Modèles de données
-│   ├── services/                 # Logique métier
-│   │   └── facade.py             # Façade pour les services
-│   └── persistence/              # Accès aux données
-│       └── repository.py         # Repository pattern
-├── backend/                      # Backend Node.js
-│   └── src/
-│       └── routes/               # Routes API Node.js
-│           ├── auth.js           # Authentification
-│           ├── users.js          # Profils utilisateurs
-│           ├── games.js          # Recherche de jeux
-│           ├── events.js         # Gestion des événements
-│           ├── friends.js        # Gestion des amis
-│           ├── posts.js          # Publications/Actions
-│           └── search.js         # Recherche globale
-├── config/                       # Configuration de l'application
-│   └── __init__.py
-├── database/                     # Gestion de la base de données
-│   └── __init__.py
-├── tests/                        # Tests unitaires
-│   └── __init__.py
-├── utils/                        # Utilitaires et helpers
-│   └── __init__.py
-├── config.py                     # Configuration principale
-├── run.py                        # Point d'entrée de l'application
-└── requirements.txt              # Dépendances Python
-```
-Installation et Démarrage
-Suivez ces étapes pour installer et lancer le projet Python.
-
-1. Installation des dépendances
-```
+Installer les dépendances
 Bash
+pip install -r Portfolio-Project-app/requirements.txt
 
-pip install -r requirements.txt
-```
-2. Configuration Base de Données
-```
+# .env
+FLASK_APP=run.py
+FLASK_ENV=development
+
+# Base de données
+DB_HOST=127.0.0.1
+DB_USER=root
+DB_PASSWORD=""
+DB_NAME=boardgame_meetup
+
+# Sécurité
+SECRET_KEY=une_clé_très_secrete_et_aléatoire
+JWT_SECRET_KEY=une_autre_clé_secrete_jwt
+
+ Démarrage
+Le script de lancement initialise automatiquement les tables et injecte des données de test (Admin, Jeux) si elles n'existent pas.
+
 Bash
+cd Portfolio-Project-app
+python3 run.py
+L'API sera accessible sur : http://127.0.0.1:5000/api/v1/
 
-python database/init_database.py
-```
-3. Lancer le Serveur
-```
-Bash
+La documentation Swagger est disponible sur : http://127.0.0.1:5000/apidocs/
 
-python run.py
-```
-🧪 Commandes de Test
-Le projet utilise Pytest. Les tests s'exécutent sur une base de données en mémoire.
+ Tests et Documentation
+Les endpoints sont documentés via Swagger. Une fois le serveur lancé, visitez /apidocs pour tester les routes directement depuis le navigateur.
 
-Lancer tous les tests
-Pour vérifier que toute l'application fonctionne correctement :
-```
-Bash
+Workflow Git
+main : Code de production stable.
 
-pytest
-```
-Lancer un fichier de test spécifique
-```
-Bash
-
-pytest tests/test_auth.py
-```
+dev : Intégration des nouvelles fonctionnalités.
+ 
+Auteurs
+Projet Portfolio - Wassef / Nina / Warren
