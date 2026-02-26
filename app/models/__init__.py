@@ -20,11 +20,11 @@ class User(db.Model):
             "user_id": self.user_id,
             "username": self.username,
             "email": self.email,
+            "role": self.role.value if self.role else None,
             "city": self.city,
             "region": self.region,
             "bio": self.bio,
             "profile_image_url": self.profile_image_url,
-            "role": self.role,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
