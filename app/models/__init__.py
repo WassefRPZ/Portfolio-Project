@@ -20,7 +20,7 @@ class User(db.Model):
             "user_id": self.user_id,
             "username": self.username,
             "email": self.email,
-            "role": self.role.value if self.role else None,
+            "role": self.role if self.role else None,
             "city": self.city,
             "region": self.region,
             "bio": self.bio,
