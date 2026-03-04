@@ -8,7 +8,7 @@ facade = BoardGameFacade()
 
 # -----------------------------------------------
 # POST /auth/register
-# Body: { username, email, password, city, first_name?, last_name?, region?, bio? }
+# Body: { username, email, password, city, region?, bio? }
 # -----------------------------------------------
 @api_v1.route('/auth/register', methods=['POST'])
 def register():
@@ -39,16 +39,16 @@ parameters:
           example: nina@test.com
         password:
           type: string
-          example: 1234
+          example: motdepasse123
         city:
           type: string
           example: Paris
-        first_name:
+        region:
           type: string
-          example: Nina
-        last_name:
+          example: Île-de-France
+        bio:
           type: string
-          example: Dupont
+          example: Passionnée de jeux de société
 responses:
   201:
     description: User registered
@@ -65,11 +65,11 @@ responses:
         return jsonify({"error": error}), 400
 
     access_token = create_access_token(
-        identity=str(user['user_id']),
+        identity=user['id'],  # INT — utilisé comme identité JWT
         additional_claims={
-            'username': user['username'],
+            'username': user.get('username'),
             'email':    user['email'],
-            'is_admin': user.get('is_admin', False),
+            'role':     user.get('role', 'user'),
         }
     )
 
@@ -132,11 +132,11 @@ def login():
         return jsonify({"error": "Email ou mot de passe incorrect"}), 401
 
     access_token = create_access_token(
-        identity=str(user['user_id']),
+        identity=user['id'],  # INT — utilisé comme identité JWT
         additional_claims={
-            'username': user['username'],
+            'username': user.get('username'),
             'email':    user['email'],
-            'is_admin': user.get('is_admin', False),
+            'role':     user.get('role', 'user'),
         }
     )
 

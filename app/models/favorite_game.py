@@ -10,8 +10,8 @@ class FavoriteGame(db.Model):
 
     __tablename__ = 'favorite_games'
 
-    user_id  = db.Column(db.String(50), db.ForeignKey('users.user_id'), primary_key=True)
-    game_id  = db.Column(db.String(50), db.ForeignKey('games.game_id'), primary_key=True)
+    user_id  = db.Column(db.Integer, db.ForeignKey('users.id'),  primary_key=True)
+    game_id  = db.Column(db.Integer, db.ForeignKey('games.id'),  primary_key=True)
     added_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relations pour accéder à l'objet User ou Game directement

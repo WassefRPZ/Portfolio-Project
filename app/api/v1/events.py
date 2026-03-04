@@ -71,7 +71,7 @@ parameters:
         title:
           type: string
         game_id:
-          type: string
+          type: integer
         city:
           type: string
         location_text:
@@ -110,7 +110,7 @@ responses:
 # -----------------------------------------------
 # GET /events/<event_id> → détails d'un événement
 # -----------------------------------------------
-@api_v1.route('/events/<event_id>', methods=['GET'])
+@api_v1.route('/events/<int:event_id>', methods=['GET'])
 def get_event(event_id):
     """
     Get event details
@@ -120,7 +120,7 @@ def get_event(event_id):
     parameters:
       - name: event_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -139,7 +139,7 @@ def get_event(event_id):
 # -----------------------------------------------
 # PUT /events/<event_id> → modifier un événement
 # -----------------------------------------------
-@api_v1.route('/events/<event_id>', methods=['PUT'])
+@api_v1.route('/events/<int:event_id>', methods=['PUT'])
 @jwt_required()
 def update_event(event_id):
     """
@@ -152,7 +152,7 @@ def update_event(event_id):
     parameters:
       - name: event_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -190,7 +190,7 @@ def update_event(event_id):
 # -----------------------------------------------
 # DELETE /events/<event_id> → annuler un événement
 # -----------------------------------------------
-@api_v1.route('/events/<event_id>', methods=['DELETE'])
+@api_v1.route('/events/<int:event_id>', methods=['DELETE'])
 @jwt_required()
 def cancel_event(event_id):
     """
@@ -203,7 +203,7 @@ def cancel_event(event_id):
     parameters:
       - name: event_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -236,7 +236,7 @@ def cancel_event(event_id):
 # -----------------------------------------------
 # POST /events/<event_id>/join → rejoindre un événement
 # -----------------------------------------------
-@api_v1.route('/events/<event_id>/join', methods=['POST'])
+@api_v1.route('/events/<int:event_id>/join', methods=['POST'])
 @jwt_required()
 def join_event(event_id):
     """
@@ -249,7 +249,7 @@ def join_event(event_id):
     parameters:
       - name: event_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       201:
@@ -281,7 +281,7 @@ def join_event(event_id):
 # -----------------------------------------------
 # POST /events/<event_id>/leave → quitter un événement
 # -----------------------------------------------
-@api_v1.route('/events/<event_id>/leave', methods=['POST'])
+@api_v1.route('/events/<int:event_id>/leave', methods=['POST'])
 @jwt_required()
 def leave_event(event_id):
     """
@@ -294,7 +294,7 @@ def leave_event(event_id):
     parameters:
       - name: event_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -323,7 +323,7 @@ def leave_event(event_id):
 # -----------------------------------------------
 # GET /events/<event_id>/comments → voir les commentaires
 # -----------------------------------------------
-@api_v1.route('/events/<event_id>/comments', methods=['GET'])
+@api_v1.route('/events/<int:event_id>/comments', methods=['GET'])
 def get_event_comments(event_id):
     """
     Get event comments
@@ -333,7 +333,7 @@ def get_event_comments(event_id):
     parameters:
       - name: event_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -341,7 +341,7 @@ def get_event_comments(event_id):
       404:
         description: Event not found
     """
-    event = facade.get_event_details(event_id)
+    event = facade.get_event(event_id)
     if not event:
         return jsonify({"error": "Événement introuvable"}), 404
 
@@ -352,7 +352,7 @@ def get_event_comments(event_id):
 # -----------------------------------------------
 # POST /events/<event_id>/comments → ajouter un commentaire
 # -----------------------------------------------
-@api_v1.route('/events/<event_id>/comments', methods=['POST'])
+@api_v1.route('/events/<int:event_id>/comments', methods=['POST'])
 @jwt_required()
 def add_event_comment(event_id):
     """
@@ -365,7 +365,7 @@ def add_event_comment(event_id):
     parameters:
       - name: event_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       201:
@@ -381,7 +381,7 @@ def add_event_comment(event_id):
     if not data or not data.get('content'):
         return jsonify({"error": "Le contenu du commentaire est requis"}), 400
 
-    event = facade.get_event_details(event_id)
+    event = facade.get_event(event_id)
     if not event:
         return jsonify({"error": "Événement introuvable"}), 404
 

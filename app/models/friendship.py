@@ -2,36 +2,39 @@ from datetime import datetime
 from app import db
 
 
-class Friendship(db.Model):
+class Friend(db.Model):
     """
     Relation d'amitié entre deux utilisateurs.
-    La clé primaire est composite (user_id_1, user_id_2).
-    Par convention, user_id_1 < user_id_2 (trié alphabétiquement)
+    Convention : user_id_1 < user_id_2 (enforcer côté applicatif)
     pour éviter les doublons (A,B) et (B,A).
-    action_user_id = celui qui a envoyé la demande.
-    Statuts : pending → accepted / declined.
+    requester_id : ID réel de l'expéditeur (indépendant du tri).
+    Statuts : pending → accepted. Refus = suppression de la ligne.
     """
 
-    __tablename__ = 'friendships'
+    __tablename__ = 'friends'
 
-    user_id_1      = db.Column(db.String(50), db.ForeignKey('users.user_id'), primary_key=True)
-    user_id_2      = db.Column(db.String(50), db.ForeignKey('users.user_id'), primary_key=True)
-    action_user_id = db.Column(db.String(50), db.ForeignKey('users.user_id'), nullable=False)
-    status         = db.Column(db.Enum('pending', 'accepted', 'declined'), default='pending')
-    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at     = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id           = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id_1    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id_2    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    requester_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status       = db.Column(db.Enum('pending', 'accepted'), default='pending')
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user1       = db.relationship('User', foreign_keys=[user_id_1],      lazy='select')
-    user2       = db.relationship('User', foreign_keys=[user_id_2],      lazy='select')
-    action_user = db.relationship('User', foreign_keys=[action_user_id], lazy='select')
+    __table_args__ = (
+        db.UniqueConstraint('user_id_1', 'user_id_2', name='uq_friendship'),
+    )
+
+    user1     = db.relationship('User', foreign_keys=[user_id_1], lazy='select')
+    user2     = db.relationship('User', foreign_keys=[user_id_2], lazy='select')
+    requester = db.relationship('User', foreign_keys=[requester_id], lazy='select')
 
     def to_dict(self):
         """Sérialise la relation d'amitié en dictionnaire JSON-compatible."""
         return {
-            "user_id_1":      self.user_id_1,
-            "user_id_2":      self.user_id_2,
-            "action_user_id": self.action_user_id,
-            "status":         self.status,
-            "created_at":     self.created_at.isoformat() if self.created_at else None,
-            "updated_at":     self.updated_at.isoformat() if self.updated_at else None,
+            "id":           self.id,
+            "user_id_1":    self.user_id_1,
+            "user_id_2":    self.user_id_2,
+            "requester_id": self.requester_id,
+            "status":       self.status,
+            "created_at":   self.created_at.isoformat() if self.created_at else None,
         }

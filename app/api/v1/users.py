@@ -36,7 +36,7 @@ responses:
 
 # -----------------------------------------------
 # PUT /users/me → modifier son profil
-# Champs modifiables : first_name, last_name, username, city, region, bio, profile_image_url
+# Champs modifiables : username, city, region, bio, profile_image_url
 # -----------------------------------------------
 @api_v1.route('/users/me', methods=['PUT'])
 @jwt_required()
@@ -57,10 +57,6 @@ parameters:
     schema:
       type: object
       properties:
-        first_name:
-          type: string
-        last_name:
-          type: string
         username:
           type: string
         city:
@@ -131,7 +127,7 @@ def search_users():
 # -----------------------------------------------
 # GET /users/<user_id> → voir le profil d'un autre joueur
 # -----------------------------------------------
-@api_v1.route('/users/<user_id>', methods=['GET'])
+@api_v1.route('/users/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_user_profile(user_id):
     """
@@ -144,7 +140,7 @@ def get_user_profile(user_id):
     parameters:
       - name: user_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -152,7 +148,7 @@ def get_user_profile(user_id):
       404:
         description: Utilisateur introuvable
     """
-    user = facade.get_user(user_id)
+    user = facade.get_public_user(user_id)
     if not user:
         return jsonify({"error": "Utilisateur introuvable"}), 404
 
@@ -232,7 +228,7 @@ parameters:
         - game_id
       properties:
         game_id:
-          type: string
+          type: integer
 responses:
   201:
     description: Favorite added
@@ -253,7 +249,7 @@ responses:
 # -----------------------------------------------
 # DELETE /users/me/favorite-games/<game_id> → retirer un jeu favori
 # -----------------------------------------------
-@api_v1.route('/users/me/favorite-games/<game_id>', methods=['DELETE'])
+@api_v1.route('/users/me/favorite-games/<int:game_id>', methods=['DELETE'])
 @jwt_required()
 def remove_favorite_game(game_id):
     """
@@ -266,7 +262,7 @@ def remove_favorite_game(game_id):
     parameters:
       - name: game_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:

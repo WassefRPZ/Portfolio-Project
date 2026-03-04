@@ -3,35 +3,53 @@ from app import db
 
 
 class User(db.Model):
-    """Compte utilisateur de BoardGame Hub."""
+    """Compte d'authentification d'un membre de BoardGame Hub.
+    Les données de profil public (username, bio, etc.) sont dans la table profiles.
+    """
 
     __tablename__ = 'users'
 
-    user_id           = db.Column(db.String(50), primary_key=True)
-    username          = db.Column(db.String(50), unique=True, nullable=False)
-    email             = db.Column(db.String(100), unique=True, nullable=False)
-    password_hash     = db.Column(db.String(255), nullable=False)
-    first_name        = db.Column(db.String(100), default='')
-    last_name         = db.Column(db.String(100), default='')
-    city              = db.Column(db.String(100), nullable=False)
-    region            = db.Column(db.String(100), default='')
-    bio               = db.Column(db.Text)
-    is_admin          = db.Column(db.Boolean, nullable=False, default=False)
-    profile_image_url = db.Column(db.String(255))
-    created_at        = db.Column(db.DateTime, default=datetime.utcnow)
+    id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    email         = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role          = db.Column(db.Enum('user', 'admin'), nullable=False, default='user')
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+
+    profile = db.relationship('Profile', backref='user', uselist=False,
+                              lazy='select', cascade='all, delete-orphan')
 
     def to_dict(self):
-        """Sérialise l'utilisateur en dictionnaire JSON-compatible."""
-        return {
-            "user_id":           self.user_id,
-            "username":          self.username,
-            "email":             self.email,
-            "first_name":        self.first_name or '',
-            "last_name":         self.last_name or '',
-            "city":              self.city,
-            "region":            self.region or '',
-            "bio":               self.bio or '',
-            "is_admin":          bool(self.is_admin),
-            "profile_image_url": self.profile_image_url,
-            "created_at":        self.created_at.isoformat() if self.created_at else None,
+        """Sérialise l'utilisateur en dictionnaire JSON-compatible.
+        Inclut les champs du profil s'il est chargé.
+        """
+        data = {
+            "id":         self.id,
+            "email":      self.email,
+            "role":       self.role,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+        if self.profile:
+            data.update({
+                "username":          self.profile.username,
+                "bio":               self.profile.bio or '',
+                "city":              self.profile.city or '',
+                "region":            self.profile.region or '',
+                "profile_image_url": self.profile.profile_image_url,
+            })
+        return data
+
+    def to_public_dict(self):
+        """Vue publique — exclut email et rôle (utilisé pour GET /users/<id>)."""
+        data = {
+            "id":         self.id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if self.profile:
+            data.update({
+                "username":          self.profile.username,
+                "bio":               self.profile.bio or '',
+                "city":              self.profile.city or '',
+                "region":            self.profile.region or '',
+                "profile_image_url": self.profile.profile_image_url,
+            })
+        return data

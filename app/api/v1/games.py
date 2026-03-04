@@ -79,7 +79,7 @@ responses:
 # -----------------------------------------------
 # GET /games/<game_id> → détails d'un jeu
 # -----------------------------------------------
-@api_v1.route('/games/<game_id>', methods=['GET'])
+@api_v1.route('/games/<int:game_id>', methods=['GET'])
 def get_game(game_id):
     """
     Get game details
@@ -89,7 +89,7 @@ def get_game(game_id):
     parameters:
       - name: game_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -107,7 +107,7 @@ def get_game(game_id):
 # -----------------------------------------------
 # GET /games/<game_id>/events → événements utilisant ce jeu
 # -----------------------------------------------
-@api_v1.route('/games/<game_id>/events', methods=['GET'])
+@api_v1.route('/games/<int:game_id>/events', methods=['GET'])
 def get_game_events(game_id):
     """
     Get events for a game
@@ -117,7 +117,7 @@ def get_game_events(game_id):
     parameters:
       - name: game_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -156,11 +156,15 @@ def create_game():
         schema:
           type: object
           required:
+            - id_api
             - name
             - min_players
             - max_players
             - play_time_minutes
           properties:
+            id_api:
+              type: string
+              example: "TAAifFP590"
             name:
               type: string
               example: "Catan"
@@ -188,14 +192,14 @@ def create_game():
         description: Admin only
     """
     claims = get_jwt()
-    if not claims.get('is_admin', False):
+    if claims.get('role') != 'admin':
         return jsonify({"error": "Action réservée aux administrateurs"}), 403
 
     data = request.get_json()
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 
-    required = ['name', 'min_players', 'max_players', 'play_time_minutes']
+    required = ['id_api', 'name', 'min_players', 'max_players', 'play_time_minutes']
     for field in required:
         if field not in data:
             return jsonify({"error": f"Champ '{field}' manquant"}), 400
@@ -214,7 +218,7 @@ def create_game():
 # -----------------------------------------------
 # PUT /games/<game_id> → modifier un jeu (admin seulement)
 # -----------------------------------------------
-@api_v1.route('/games/<game_id>', methods=['PUT'])
+@api_v1.route('/games/<int:game_id>', methods=['PUT'])
 @jwt_required()
 def update_game(game_id):
     """
@@ -227,7 +231,7 @@ def update_game(game_id):
     parameters:
       - name: game_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -236,7 +240,7 @@ def update_game(game_id):
         description: Admin only
     """
     claims = get_jwt()
-    if not claims.get('is_admin', False):
+    if claims.get('role') != 'admin':
         return jsonify({"error": "Action réservée aux administrateurs"}), 403
 
     data = request.get_json()

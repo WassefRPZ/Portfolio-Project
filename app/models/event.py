@@ -7,13 +7,14 @@ class Event(db.Model):
     Événement de jeu de société organisé par un utilisateur.
     Un événement est lié à un jeu et se tient dans une ville.
     Statuts possibles : open → full → cancelled / completed.
+    city / region / location_text : données issues de OpenCage Geocoding API.
     """
 
     __tablename__ = 'events'
 
-    event_id      = db.Column(db.String(50), primary_key=True)
-    creator_id    = db.Column(db.String(50), db.ForeignKey('users.user_id'),  nullable=False)
-    game_id       = db.Column(db.String(50), db.ForeignKey('games.game_id'),  nullable=False)
+    id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    creator_id    = db.Column(db.Integer, db.ForeignKey('users.id'),  nullable=False)
+    game_id       = db.Column(db.Integer, db.ForeignKey('games.id'),  nullable=False)
     title         = db.Column(db.String(200), nullable=False)
     description   = db.Column(db.Text)
     city          = db.Column(db.String(100), nullable=False)
@@ -25,6 +26,7 @@ class Event(db.Model):
         db.Enum('open', 'full', 'cancelled', 'completed'),
         default='open'
     )
+    cover_url     = db.Column(db.String(255))          # URL Cloudinary (optionnel)
     created_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
     creator      = db.relationship('User',             foreign_keys=[creator_id],
@@ -33,15 +35,15 @@ class Event(db.Model):
                                    backref='events',         lazy='select')
     participants = db.relationship('EventParticipant', backref='event',
                                    lazy='select', cascade='all, delete-orphan')
-    comments     = db.relationship('Comment',          backref='event',
-                                   lazy='select', cascade='all, delete-orphan')
+    event_comments = db.relationship('EventComment',   backref='event',
+                                     lazy='select', cascade='all, delete-orphan')
 
     def to_dict(self, include_participants=False):
         """Sérialise l'événement. include_participants=True ajoute la liste des inscrits."""
         confirmed = [p for p in self.participants if p.status == 'confirmed']
 
         data = {
-            "event_id":        self.event_id,
+            "id":              self.id,
             "creator_id":      self.creator_id,
             "game_id":         self.game_id,
             "title":           self.title,
@@ -52,6 +54,7 @@ class Event(db.Model):
             "date_time":       self.date_time.isoformat() if self.date_time else None,
             "max_players":     self.max_players,
             "status":          self.status,
+            "cover_url":       self.cover_url,
             "created_at":      self.created_at.isoformat() if self.created_at else None,
             "current_players": len(confirmed),
         }
