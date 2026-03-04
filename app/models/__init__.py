@@ -5,5 +5,3 @@ from app.models.event_participant import EventParticipant  # noqa: F401
 from app.models.comment           import Comment           # noqa: F401
 from app.models.friendship        import Friendship        # noqa: F401
 from app.models.favorite_game     import FavoriteGame      # noqa: F401
-from app.models.post              import Post              # noqa: F401
-from app.models.review            import Review            # noqa: F401

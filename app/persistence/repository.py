@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from app import db
-from app.models import User, Game, Event, EventParticipant, Comment, Friendship, FavoriteGame, Post, Review
+from app.models import User, Game, Event, EventParticipant, Comment, Friendship, FavoriteGame
 
 
 class SQLAlchemyRepository:
@@ -270,72 +270,3 @@ class FavoriteGameRepository(SQLAlchemyRepository):
             .filter(FavoriteGame.user_id == user_id)
             .all()
         )
-
-
-# =============================================================================
-# POSTS
-# =============================================================================
-
-class PostRepository(SQLAlchemyRepository):
-
-    def __init__(self):
-        super().__init__(Post)
-
-    def get_by_id(self, post_id):
-        return Post.query.filter_by(post_id=post_id).first()
-
-    def get_by_author(self, author_id):
-        """Retourne toutes les publications d'un utilisateur, du plus récent au plus ancien."""
-        return (
-            Post.query
-            .filter_by(author_id=author_id)
-            .order_by(Post.created_at.desc())
-            .all()
-        )
-
-    def get_all_recent(self, limit=20):
-        """Retourne les publications les plus récentes (fil d'actualité)."""
-        return (
-            Post.query
-            .options(joinedload(Post.author))
-            .order_by(Post.created_at.desc())
-            .limit(limit)
-            .all()
-        )
-
-
-# =============================================================================
-# REVIEWS
-# =============================================================================
-
-class ReviewRepository(SQLAlchemyRepository):
-
-    def __init__(self):
-        super().__init__(Review)
-
-    def get_by_id(self, review_id):
-        return Review.query.filter_by(review_id=review_id).first()
-
-    def get_by_reviewed_user(self, user_id):
-        """Retourne toutes les reviews reçues par un utilisateur."""
-        return (
-            Review.query
-            .options(joinedload(Review.reviewer))
-            .filter_by(reviewed_user_id=user_id)
-            .order_by(Review.created_at.desc())
-            .all()
-        )
-
-    def get_by_reviewed_event(self, event_id):
-        """Retourne toutes les reviews d'un événement."""
-        return (
-            Review.query
-            .options(joinedload(Review.reviewer))
-            .filter_by(reviewed_event_id=event_id)
-            .order_by(Review.created_at.desc())
-            .all()
-        )
-
-    def get_by_reviewer(self, reviewer_id):
-        """Retourne toutes les reviews émises par un utilisateur."""
-        return Review.query.filter_by(reviewer_id=reviewer_id).all()

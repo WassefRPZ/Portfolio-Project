@@ -58,7 +58,7 @@ def create_app():
 
     # Import explicite des modèles pour que Flask-Migrate les découvre tous
     from app.models import (       # noqa: F401
-        User, Game, Event, EventParticipant, Comment, Friendship, FavoriteGame, Post, Review
+        User, Game, Event, EventParticipant, Comment, Friendship, FavoriteGame
     )
 
     @app.route('/')

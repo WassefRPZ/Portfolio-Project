@@ -2,12 +2,11 @@ import uuid
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
-from app.models import User, Game, Event, EventParticipant, Comment, Friendship, FavoriteGame, Post, Review
+from app.models import User, Game, Event, EventParticipant, Comment, Friendship, FavoriteGame
 from app.persistence.repository import (
     UserRepository, GameRepository, EventRepository,
     EventParticipantRepository, CommentRepository,
     FriendshipRepository, FavoriteGameRepository,
-    PostRepository, ReviewRepository,
 )
 
 
@@ -25,8 +24,6 @@ class BoardGameFacade:
         self.comments     = CommentRepository()
         self.friendships  = FriendshipRepository()
         self.favorites    = FavoriteGameRepository()
-        self.posts        = PostRepository()
-        self.reviews      = ReviewRepository()
 
     # ==========================================
     # AUTH
@@ -432,106 +429,3 @@ class BoardGameFacade:
 
     def get_events_by_game(self, game_id):
         return [e.to_dict() for e in self.events.get_by_game(game_id)]
-
-    # ==========================================
-    # PUBLICATIONS
-    # ==========================================
-
-    def create_post(self, user_id, data):
-        for field in ['title', 'content']:
-            if not data.get(field):
-                return None, f"Le champ '{field}' est requis"
-
-        post = Post(
-            post_id=f"pst_{uuid.uuid4().hex[:8]}",
-            author_id=user_id,
-            title=data['title'],
-            content=data['content'],
-        )
-        self.posts.save(post)
-        return post.to_dict(), None
-
-    def delete_post(self, post_id, user_id):
-        post = self.posts.get_by_id(post_id)
-        if not post:
-            return None, "Publication introuvable"
-        if post.author_id != user_id:
-            return None, "Action non autorisée"
-
-        self.posts.delete(post)
-        return {"success": True}, None
-
-    def get_feed(self, limit=20):
-        """Retourne les publications les plus récentes (fil d'actualité)."""
-        posts = self.posts.get_all_recent(limit=limit)
-        result = []
-        for post in posts:
-            post_data = post.to_dict()
-            if post.author:
-                post_data['username'] = post.author.username
-            result.append(post_data)
-        return result
-
-    # ==========================================
-    # REVIEWS
-    # ==========================================
-
-    def add_review(self, reviewer_id, data):
-        try:
-            rating = int(data.get('rating', 0))
-        except (ValueError, TypeError):
-            return None, "La note doit être un entier entre 1 et 5"
-
-        if not (1 <= rating <= 5):
-            return None, "La note doit être un entier entre 1 et 5"
-
-        reviewed_user_id  = data.get('reviewed_user_id')
-        reviewed_event_id = data.get('reviewed_event_id')
-
-        if not reviewed_user_id and not reviewed_event_id:
-            return None, "Une cible est requise : reviewed_user_id ou reviewed_event_id"
-        if reviewed_user_id and reviewed_event_id:
-            return None, "Choisissez une seule cible : reviewed_user_id OU reviewed_event_id"
-
-        if reviewed_user_id:
-            if not self.users.get_by_id(reviewed_user_id):
-                return None, "Utilisateur introuvable"
-            if reviewed_user_id == reviewer_id:
-                return None, "Vous ne pouvez pas vous noter vous-même"
-
-        if reviewed_event_id:
-            if not self.events.get_by_id(reviewed_event_id):
-                return None, "Événement introuvable"
-
-        review = Review(
-            review_id=f"rev_{uuid.uuid4().hex[:8]}",
-            reviewer_id=reviewer_id,
-            reviewed_user_id=reviewed_user_id,
-            reviewed_event_id=reviewed_event_id,
-            rating=rating,
-            comment=data.get('comment', ''),
-        )
-        self.reviews.save(review)
-        return review.to_dict(), None
-
-    def get_reviews_for_user(self, user_id):
-        """Retourne toutes les reviews reçues par un utilisateur."""
-        reviews = self.reviews.get_by_reviewed_user(user_id)
-        result = []
-        for r in reviews:
-            r_data = r.to_dict()
-            if r.reviewer:
-                r_data['reviewer_username'] = r.reviewer.username
-            result.append(r_data)
-        return result
-
-    def get_reviews_for_event(self, event_id):
-        """Retourne toutes les reviews d'un événement."""
-        reviews = self.reviews.get_by_reviewed_event(event_id)
-        result = []
-        for r in reviews:
-            r_data = r.to_dict()
-            if r.reviewer:
-                r_data['reviewer_username'] = r.reviewer.username
-            result.append(r_data)
-        return result

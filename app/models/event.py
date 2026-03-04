@@ -1,0 +1,62 @@
+from datetime import datetime
+from app import db
+
+
+class Event(db.Model):
+    """
+    Événement de jeu de société organisé par un utilisateur.
+    Un événement est lié à un jeu et se tient dans une ville.
+    Statuts possibles : open → full → cancelled / completed.
+    """
+
+    __tablename__ = 'events'
+
+    event_id      = db.Column(db.String(50), primary_key=True)
+    creator_id    = db.Column(db.String(50), db.ForeignKey('users.user_id'),  nullable=False)
+    game_id       = db.Column(db.String(50), db.ForeignKey('games.game_id'),  nullable=False)
+    title         = db.Column(db.String(200), nullable=False)
+    description   = db.Column(db.Text)
+    city          = db.Column(db.String(100), nullable=False)
+    region        = db.Column(db.String(100), default='')
+    location_text = db.Column(db.String(255), nullable=False)
+    date_time     = db.Column(db.DateTime,    nullable=False)
+    max_players   = db.Column(db.Integer,     nullable=False)
+    status        = db.Column(
+        db.Enum('open', 'full', 'cancelled', 'completed'),
+        default='open'
+    )
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+
+    creator      = db.relationship('User',             foreign_keys=[creator_id],
+                                   backref='events_created', lazy='select')
+    game_obj     = db.relationship('Game',             foreign_keys=[game_id],
+                                   backref='events',         lazy='select')
+    participants = db.relationship('EventParticipant', backref='event',
+                                   lazy='select', cascade='all, delete-orphan')
+    comments     = db.relationship('Comment',          backref='event',
+                                   lazy='select', cascade='all, delete-orphan')
+
+    def to_dict(self, include_participants=False):
+        """Sérialise l'événement. include_participants=True ajoute la liste des inscrits."""
+        confirmed = [p for p in self.participants if p.status == 'confirmed']
+
+        data = {
+            "event_id":        self.event_id,
+            "creator_id":      self.creator_id,
+            "game_id":         self.game_id,
+            "title":           self.title,
+            "description":     self.description or '',
+            "city":            self.city,
+            "region":          self.region or '',
+            "location_text":   self.location_text,
+            "date_time":       self.date_time.isoformat() if self.date_time else None,
+            "max_players":     self.max_players,
+            "status":          self.status,
+            "created_at":      self.created_at.isoformat() if self.created_at else None,
+            "current_players": len(confirmed),
+        }
+
+        if include_participants:
+            data["participants"] = [p.to_dict() for p in confirmed]
+
+        return data

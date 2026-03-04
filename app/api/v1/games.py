@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt
 from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
 
