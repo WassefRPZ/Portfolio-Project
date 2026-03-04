@@ -30,3 +30,5 @@ class Config:
         f"@{DB_HOST}/{DB_NAME}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")

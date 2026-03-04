@@ -1,29 +1,34 @@
-import uuid
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
-from app.models import User, Game, Event, EventParticipant, Comment, Friendship, FavoriteGame
+from app.models import (
+    User, Profile, Game, Event, EventParticipant,
+    EventComment, Friend, FavoriteGame, Post, Review
+)
 from app.persistence.repository import (
-    UserRepository, GameRepository, EventRepository,
-    EventParticipantRepository, CommentRepository,
-    FriendshipRepository, FavoriteGameRepository,
+    UserRepository, ProfileRepository, GameRepository, EventRepository,
+    EventParticipantRepository, EventCommentRepository,
+    FriendRepository, FavoriteGameRepository,
+    PostRepository, ReviewRepository,
 )
 
 
 class BoardGameFacade:
     """
     Couche métier centrale. Toutes les routes API passent par ici.
-
     """
 
     def __init__(self):
         self.users        = UserRepository()
+        self.profiles     = ProfileRepository()
         self.games        = GameRepository()
         self.events       = EventRepository()
         self.participants = EventParticipantRepository()
-        self.comments     = CommentRepository()
-        self.friendships  = FriendshipRepository()
+        self.comments     = EventCommentRepository()
+        self.friends      = FriendRepository()
         self.favorites    = FavoriteGameRepository()
+        self.posts        = PostRepository()
+        self.reviews      = ReviewRepository()
 
     # ==========================================
     # AUTH
@@ -34,24 +39,37 @@ class BoardGameFacade:
             if not data.get(field):
                 return None, f"Le champ '{field}' est requis"
 
+        if len(data['password']) < 8:
+            return None, "Le mot de passe doit contenir au minimum 8 caractères"
+
         if self.users.get_by_email(data['email']):
             return None, "Cet email est déjà utilisé"
 
-        if self.users.get_by_username(data['username']):
+        if self.profiles.get_by_username(data['username']):
             return None, "Ce nom d'utilisateur est déjà pris"
 
+        # Création du compte d'authentification
         user = User(
-            user_id=f"usr_{uuid.uuid4().hex[:8]}",
-            username=data['username'],
             email=data['email'],
             password_hash=generate_password_hash(data['password']),
-            first_name=data.get('first_name', ''),
-            last_name=data.get('last_name', ''),
+            role='user',
+        )
+        db.session.add(user)
+        db.session.flush()  # récupère user.id sans commit
+
+        # Création du profil public associé
+        profile = Profile(
+            user_id=user.id,
+            username=data['username'],
+            bio=data.get('bio', ''),
             city=data['city'],
             region=data.get('region', ''),
-            bio=data.get('bio', ''),
         )
-        self.users.save(user)
+        db.session.add(profile)
+        db.session.commit()
+
+        # Rattacher le profil pour que to_dict() fonctionne
+        user.profile = profile
         return user.to_dict(), None
 
     def login_user(self, email, password):
@@ -72,20 +90,34 @@ class BoardGameFacade:
         user_data['favorite_games'] = self.get_favorite_games(user_id)
         return user_data
 
+    def get_public_user(self, user_id):
+        """Vue publique sans email ni rôle — utilisée pour GET /users/<id>."""
+        user = self.users.get_by_id(user_id)
+        if not user:
+            return None
+        user_data = user.to_public_dict()
+        user_data['favorite_games'] = self.get_favorite_games(user_id)
+        return user_data
+
     def update_user_profile(self, user_id, data):
         user = self.users.get_by_id(user_id)
         if not user:
             return None, "Utilisateur introuvable"
 
-        if 'username' in data and data['username'] != user.username:
-            if self.users.get_by_username(data['username']):
+        profile = self.profiles.get_by_user_id(user_id)
+        if not profile:
+            return None, "Profil introuvable"
+
+        if 'username' in data and data['username'] != profile.username:
+            if self.profiles.get_by_username(data['username']):
                 return None, "Ce nom d'utilisateur est déjà pris"
 
-        for field in ['username', 'first_name', 'last_name', 'city', 'region', 'bio', 'profile_image_url']:
+        for field in ['username', 'bio', 'city', 'region', 'profile_image_url']:
             if field in data:
-                setattr(user, field, data[field])
+                setattr(profile, field, data[field])
 
-        self.users.commit()
+        self.profiles.commit()
+        user.profile = profile
         return user.to_dict(), None
 
     def search_users(self, query, city=None):
@@ -100,8 +132,8 @@ class BoardGameFacade:
         joined_ids = [p.event_id for p in participations]
         joined = self.events.get_by_ids(joined_ids)
 
-        # Déduplication
-        all_events = {e.event_id: e for e in created + joined}
+        # Déduplication par id INT
+        all_events = {e.id: e for e in created + joined}
         return [e.to_dict() for e in all_events.values()]
 
     # ==========================================
@@ -116,11 +148,14 @@ class BoardGameFacade:
         result = []
         for event in events:
             event_data = event.to_dict()
-            # game_obj déjà chargé via joinedload
             if event.game_obj:
                 event_data['game'] = event.game_obj.to_dict()
             result.append(event_data)
         return result, None
+
+    def get_event(self, event_id):
+        event = self.events.get_by_id(event_id)
+        return event.to_dict() if event else None
 
     def get_event_details(self, event_id):
         event = self.events.get_by_id_full(event_id)
@@ -144,7 +179,6 @@ class BoardGameFacade:
             return None, "Format de date invalide. Utiliser ISO 8601 (ex: 2024-12-25T19:00:00)"
 
         event = Event(
-            event_id=f"evt_{uuid.uuid4().hex[:8]}",
             creator_id=creator_id,
             game_id=data['game_id'],
             title=data['title'],
@@ -154,6 +188,7 @@ class BoardGameFacade:
             location_text=data['location_text'],
             date_time=event_date_time,
             max_players=data['max_players'],
+            cover_url=data.get('cover_url'),
         )
         self.events.save(event)
         return event.to_dict(), None
@@ -171,7 +206,7 @@ class BoardGameFacade:
                     f"{current_count} participants sont déjà confirmés"
                 )
 
-        for field in ['title', 'description', 'city', 'region', 'location_text', 'max_players']:
+        for field in ['title', 'description', 'city', 'region', 'location_text', 'max_players', 'cover_url']:
             if field in data:
                 setattr(event, field, data[field])
 
@@ -200,7 +235,10 @@ class BoardGameFacade:
         if not event:
             return None, "Événement introuvable"
 
-        if self.participants.get(event_id, user_id, status='confirmed'):
+        if event.status != 'open':
+            return None, "Cet événement n'accepte plus de participants"
+
+        if self.participants.get_any(event_id, user_id):
             return None, "Vous participez déjà à cet événement"
 
         count = self.participants.count_confirmed(event_id)
@@ -208,16 +246,14 @@ class BoardGameFacade:
             return None, "Événement complet"
 
         participation = EventParticipant(
-            participant_id=f"prt_{uuid.uuid4().hex[:8]}",
             event_id=event_id,
             user_id=user_id,
             status='confirmed',
         )
-        # Ajout de la participation
         db.session.add(participation)
         if count + 1 >= event.max_players:
             event.status = 'full'
-        db.session.commit()
+        self.events.commit()
 
         return participation.to_dict(), None
 
@@ -228,7 +264,6 @@ class BoardGameFacade:
 
         event = self.events.get_by_id(event_id)
 
-        # Suppression de la participation
         db.session.delete(participation)
         if event and event.status == 'full':
             event.status = 'open'
@@ -237,7 +272,7 @@ class BoardGameFacade:
         return {"success": True}, None
 
     # ==========================================
-    # COMMENTAIRES
+    # COMMENTAIRES D'ÉVÉNEMENTS
     # ==========================================
 
     def get_event_comments(self, event_id):
@@ -245,22 +280,21 @@ class BoardGameFacade:
         result = []
         for comment in comments:
             comment_data = comment.to_dict()
-            if comment.author:
-                comment_data['username'] = comment.author.username
+            if comment.author and comment.author.profile:
+                comment_data['username'] = comment.author.profile.username
             result.append(comment_data)
         return result
 
     def add_comment(self, event_id, user_id, content):
-        comment = Comment(
-            comment_id=f"cmt_{uuid.uuid4().hex[:8]}",
+        comment = EventComment(
             event_id=event_id,
             user_id=user_id,
             content=content,
         )
         self.comments.save(comment)
         comment_data = comment.to_dict()
-        if comment.author:
-            comment_data['username'] = comment.author.username
+        if comment.author and comment.author.profile:
+            comment_data['username'] = comment.author.profile.username
         return comment_data, None
 
     # ==========================================
@@ -268,22 +302,23 @@ class BoardGameFacade:
     # ==========================================
 
     def get_friends(self, user_id):
-        friendships = self.friendships.get_accepted(user_id)
-        friends = []
+        friendships = self.friends.get_accepted(user_id)
+        result = []
         for f in friendships:
             friend = f.user2 if f.user_id_1 == user_id else f.user1
             if friend:
-                friends.append(friend.to_dict())
-        return friends
+                result.append(friend.to_dict())
+        return result
 
     def get_pending_requests(self, user_id):
-        pending = self.friendships.get_pending_received(user_id)
+        pending = self.friends.get_pending_received(user_id)
         result = []
         for f in pending:
-            if f.action_user:
+            requester = f.user1  # user_id_1 est l'expéditeur (convention du tri)
+            if requester:
                 result.append({
                     "friendship": f.to_dict(),
-                    "requester":  f.action_user.to_dict(),
+                    "requester":  requester.to_dict(),
                 })
         return result
 
@@ -296,52 +331,47 @@ class BoardGameFacade:
 
         user_id_1, user_id_2 = sorted([requester_id, receiver_id])
 
-        if self.friendships.get(user_id_1, user_id_2):
+        if self.friends.get(user_id_1, user_id_2):
             return None, "Une demande existe déjà entre vous"
 
-        friendship = Friendship(
+        friendship = Friend(
             user_id_1=user_id_1,
             user_id_2=user_id_2,
-            action_user_id=requester_id,
             status='pending',
         )
-        self.friendships.save(friendship)
+        self.friends.save(friendship)
         return friendship.to_dict(), None
 
     def accept_friend(self, current_user_id, requester_id):
         user_id_1, user_id_2 = sorted([current_user_id, requester_id])
-        friendship = self.friendships.get_with_status(user_id_1, user_id_2, 'pending')
+        friendship = self.friends.get_with_status(user_id_1, user_id_2, 'pending')
 
         if not friendship:
             return None, "Demande introuvable"
-        if friendship.action_user_id == current_user_id:
-            return None, "Vous ne pouvez pas accepter votre propre demande"
 
         friendship.status = 'accepted'
-        self.friendships.commit()
+        self.friends.commit()
         return friendship.to_dict(), None
 
     def decline_friend(self, current_user_id, requester_id):
         user_id_1, user_id_2 = sorted([current_user_id, requester_id])
-        friendship = self.friendships.get_with_status(user_id_1, user_id_2, 'pending')
+        friendship = self.friends.get_with_status(user_id_1, user_id_2, 'pending')
 
         if not friendship:
             return None, "Demande introuvable"
-        if friendship.action_user_id == current_user_id:
-            return None, "Vous ne pouvez pas refuser votre propre demande"
 
         friendship.status = 'declined'
-        self.friendships.commit()
+        self.friends.commit()
         return friendship.to_dict(), None
 
     def remove_friend(self, current_user_id, friend_id):
         user_id_1, user_id_2 = sorted([current_user_id, friend_id])
-        friendship = self.friendships.get_with_status(user_id_1, user_id_2, 'accepted')
+        friendship = self.friends.get_with_status(user_id_1, user_id_2, 'accepted')
 
         if not friendship:
             return None, "Cet utilisateur n'est pas dans vos amis"
 
-        self.friendships.delete(friendship)
+        self.friends.delete(friendship)
         return {"success": True}, None
 
     # ==========================================
@@ -383,6 +413,9 @@ class BoardGameFacade:
     def get_game_by_name(self, name):
         return self.games.get_by_name(name)
 
+    def get_game_by_api_id(self, id_api):
+        return self.games.get_by_api_id(id_api)
+
     def search_games(self, query):
         return [g.to_dict() for g in self.games.search(query)]
 
@@ -399,7 +432,7 @@ class BoardGameFacade:
             return None, "min_players ne peut pas dépasser max_players"
 
         game = Game(
-            game_id=f"game_{uuid.uuid4().hex[:8]}",
+            id_api=data['id_api'],
             name=data['name'],
             description=data.get('description', ''),
             min_players=data['min_players'],
@@ -420,7 +453,8 @@ class BoardGameFacade:
         if min_p > max_p:
             return None, "min_players ne peut pas dépasser max_players"
 
-        for field in ['name', 'description', 'min_players', 'max_players', 'play_time_minutes', 'image_url']:
+        for field in ['name', 'description', 'min_players', 'max_players',
+                      'play_time_minutes', 'image_url', 'id_api']:
             if field in data:
                 setattr(game, field, data[field])
 

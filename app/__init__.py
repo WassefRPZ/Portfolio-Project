@@ -16,7 +16,8 @@ def create_app():
     # Extensions
     db.init_app(app)
     jwt.init_app(app)
-    CORS(app)
+    origins = app.config.get("CORS_ORIGINS", "*")
+    CORS(app, origins=origins.split(",") if origins != "*" else "*")
 
     # Swagger
     swagger_config = {
@@ -54,7 +55,8 @@ def create_app():
     app.register_blueprint(api_v1, url_prefix='/api/v1')
 
     from app.models import (  # noqa: F401
-        User, Game, Event, EventParticipant, Comment, Friendship, FavoriteGame
+        User, Profile, Game, Event, EventParticipant,
+        EventComment, Friend, FavoriteGame, Post, Review
     )
     with app.app_context():
         db.create_all()

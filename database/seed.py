@@ -1,4 +1,3 @@
-import uuid
 import sys
 import os
 
@@ -7,17 +6,21 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from werkzeug.security import generate_password_hash
 from app import create_app, db
-from app.models import User, Game
+from app.models import User, Profile, Game
 
 app = create_app()
 
 SEED_ADMIN_PASSWORD = os.getenv("SEED_ADMIN_PASSWORD")
 if not SEED_ADMIN_PASSWORD:
-    raise RuntimeError("Variable d'environnement manquante : SEED_ADMIN_PASSWORD (vérifier le fichier .env)")
+    raise RuntimeError(
+        "Variable d'environnement manquante : SEED_ADMIN_PASSWORD (vérifier le fichier .env)"
+    )
 
 with app.app_context():
 
-    # ADMINS
+    # -----------------------------------------------------------------------
+    # ADMINS — création de User + Profile pour chaque compte administrateur
+    # -----------------------------------------------------------------------
     admins = [
         {"username": "WarrenAdmin", "email": "warren@hb.com", "city": "Paris"},
         {"username": "WassefAdmin", "email": "wassef@hb.com", "city": "Frejus"},
@@ -27,35 +30,70 @@ with app.app_context():
     print("\n--- Gestion des Admins ---")
     for admin_data in admins:
         if not User.query.filter_by(email=admin_data["email"]).first():
-            new_admin = User(
-                user_id=f"usr_{uuid.uuid4().hex[:8]}",
-                username=admin_data["username"],
+
+            # Compte d'authentification
+            new_user = User(
                 email=admin_data["email"],
                 password_hash=generate_password_hash(SEED_ADMIN_PASSWORD),
+                role='admin',
+            )
+            db.session.add(new_user)
+            db.session.flush()
+
+            # Profil public associé
+            new_profile = Profile(
+                user_id=new_user.id,
+                username=admin_data["username"],
+                bio="Compte administrateur système",
                 city=admin_data["city"],
                 region='',
-                bio="Compte administrateur système",
-                is_admin=True,
             )
-            db.session.add(new_admin)
+            db.session.add(new_profile)
             print(f"  Admin créé : {admin_data['username']}")
         else:
             print(f"  Admin existe déjà : {admin_data['username']}")
 
-    # JEUX
+    # -----------------------------------------------------------------------
+    # JEUX — id_api correspond à l'identifiant Board Game Atlas API.
+    # -----------------------------------------------------------------------
     games_data = [
-        {"name": "Catan",          "description": "Commerce et stratégie.",   "min_players": 3, "max_players": 4,  "play_time_minutes": 90},
-        {"name": "Dixit",          "description": "Jeu d'imagination.",        "min_players": 3, "max_players": 6,  "play_time_minutes": 30},
-        {"name": "Uno",            "description": "Jeu de cartes rapide.",     "min_players": 2, "max_players": 10, "play_time_minutes": 15},
-        {"name": "Monopoly",       "description": "Jeu immobilier classique.", "min_players": 2, "max_players": 8,  "play_time_minutes": 120},
-        {"name": "Ticket to Ride", "description": "Aventure ferroviaire.",     "min_players": 2, "max_players": 5,  "play_time_minutes": 60},
+        {
+            "id_api": "OIXt3DmJU0",
+            "name": "Catan",
+            "description": "Commerce et stratégie.",
+            "min_players": 3, "max_players": 4, "play_time_minutes": 90,
+        },
+        {
+            "id_api": "1ux8BkOBT9",
+            "name": "Dixit",
+            "description": "Jeu d'imagination.",
+            "min_players": 3, "max_players": 6, "play_time_minutes": 30,
+        },
+        {
+            "id_api": "4OE3e7Vvfd",
+            "name": "Uno",
+            "description": "Jeu de cartes rapide.",
+            "min_players": 2, "max_players": 10, "play_time_minutes": 15,
+        },
+        {
+            "id_api": "kPDxpJZ8PD",
+            "name": "Monopoly",
+            "description": "Jeu immobilier classique.",
+            "min_players": 2, "max_players": 8, "play_time_minutes": 120,
+        },
+        {
+            "id_api": "nl3Tgg2SjE",
+            "name": "Ticket to Ride",
+            "description": "Aventure ferroviaire.",
+            "min_players": 2, "max_players": 5, "play_time_minutes": 60,
+        },
     ]
 
     print("\n--- Gestion des Jeux ---")
     for game_info in games_data:
         if not Game.query.filter_by(name=game_info["name"]).first():
             new_game = Game(
-                game_id=f"game_{uuid.uuid4().hex[:8]}",
+                id_api=game_info["id_api"],
                 name=game_info["name"],
                 description=game_info["description"],
                 min_players=game_info["min_players"],

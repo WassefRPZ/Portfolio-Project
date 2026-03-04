@@ -2,7 +2,10 @@ from datetime import datetime
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from app import db
-from app.models import User, Game, Event, EventParticipant, Comment, Friendship, FavoriteGame
+from app.models import (
+    User, Profile, Game, Event, EventParticipant,
+    EventComment, Friend, FavoriteGame, Post, Review
+)
 
 
 class SQLAlchemyRepository:
@@ -43,21 +46,47 @@ class UserRepository(SQLAlchemyRepository):
         super().__init__(User)
 
     def get_by_id(self, user_id):
-        return User.query.filter_by(user_id=user_id).first()
+        return User.query.filter_by(id=user_id).first()
 
     def get_by_email(self, email):
         return User.query.filter_by(email=email).first()
 
     def get_by_username(self, username):
-        return User.query.filter_by(username=username).first()
+        """Cherche un utilisateur via son profil (username est dans profiles)."""
+        return (
+            User.query
+            .join(Profile, User.id == Profile.user_id)
+            .filter(Profile.username == username)
+            .first()
+        )
 
     def search(self, query, city=None):
-        q = User.query
+        """Recherche par username ou ville via join avec profiles."""
+        q = (
+            User.query
+            .join(Profile, User.id == Profile.user_id)
+        )
         if query:
-            q = q.filter(User.username.like(f'%{query}%'))
+            q = q.filter(Profile.username.like(f'%{query}%'))
         if city:
-            q = q.filter_by(city=city)
+            q = q.filter(Profile.city == city)
         return q.limit(20).all()
+
+
+# =============================================================================
+# PROFILES
+# =============================================================================
+
+class ProfileRepository(SQLAlchemyRepository):
+
+    def __init__(self):
+        super().__init__(Profile)
+
+    def get_by_user_id(self, user_id):
+        return Profile.query.filter_by(user_id=user_id).first()
+
+    def get_by_username(self, username):
+        return Profile.query.filter_by(username=username).first()
 
 
 # =============================================================================
@@ -70,7 +99,11 @@ class GameRepository(SQLAlchemyRepository):
         super().__init__(Game)
 
     def get_by_id(self, game_id):
-        return Game.query.filter_by(game_id=game_id).first()
+        return Game.query.filter_by(id=game_id).first()
+
+    def get_by_api_id(self, id_api):
+        """Recherche un jeu par son identifiant Board Game Atlas."""
+        return Game.query.filter_by(id_api=id_api).first()
 
     def get_by_name(self, name):
         return Game.query.filter_by(name=name).first()
@@ -84,10 +117,10 @@ class GameRepository(SQLAlchemyRepository):
     def get_popular(self):
         """Retourne les jeux les plus utilisés dans les événements."""
         return (
-            db.session.query(Game, func.count(Event.event_id).label('total'))
-            .join(Event, Game.game_id == Event.game_id)
-            .group_by(Game.game_id)
-            .order_by(func.count(Event.event_id).desc())
+            db.session.query(Game, func.count(Event.id).label('total'))
+            .join(Event, Game.id == Event.game_id)
+            .group_by(Game.id)
+            .order_by(func.count(Event.id).desc())
             .limit(10)
             .all()
         )
@@ -103,7 +136,7 @@ class EventRepository(SQLAlchemyRepository):
         super().__init__(Event)
 
     def get_by_id(self, event_id):
-        return Event.query.filter_by(event_id=event_id).first()
+        return Event.query.filter_by(id=event_id).first()
 
     def get_by_id_full(self, event_id):
         """Chargement complet avec joinedload — évite le problème N+1."""
@@ -114,7 +147,7 @@ class EventRepository(SQLAlchemyRepository):
                 joinedload(Event.game_obj),
                 joinedload(Event.participants),
             )
-            .filter_by(event_id=event_id)
+            .filter_by(id=event_id)
             .first()
         )
 
@@ -148,7 +181,7 @@ class EventRepository(SQLAlchemyRepository):
         """Récupère plusieurs événements en une seule requête."""
         if not event_ids:
             return []
-        return Event.query.filter(Event.event_id.in_(event_ids)).all()
+        return Event.query.filter(Event.id.in_(event_ids)).all()
 
     def get_by_game(self, game_id):
         return (
@@ -173,6 +206,12 @@ class EventParticipantRepository(SQLAlchemyRepository):
             event_id=event_id, user_id=user_id, status=status
         ).first()
 
+    def get_any(self, event_id, user_id):
+        """Retourne la participation quel que soit le statut."""
+        return EventParticipant.query.filter_by(
+            event_id=event_id, user_id=user_id
+        ).first()
+
     def count_confirmed(self, event_id):
         return EventParticipant.query.filter_by(
             event_id=event_id, status='confirmed'
@@ -185,64 +224,64 @@ class EventParticipantRepository(SQLAlchemyRepository):
 
 
 # =============================================================================
-# COMMENTS
+# EVENT COMMENTS
 # =============================================================================
 
-class CommentRepository(SQLAlchemyRepository):
+class EventCommentRepository(SQLAlchemyRepository):
 
     def __init__(self):
-        super().__init__(Comment)
+        super().__init__(EventComment)
 
     def get_by_event(self, event_id):
         """Charge les commentaires avec leurs auteurs en une seule requête."""
         return (
-            Comment.query
-            .options(joinedload(Comment.author))
+            EventComment.query
+            .options(joinedload(EventComment.author))
             .filter_by(event_id=event_id)
-            .order_by(Comment.created_at)
+            .order_by(EventComment.created_at)
             .all()
         )
 
 
 # =============================================================================
-# FRIENDSHIPS
+# FRIENDS
 # =============================================================================
 
-class FriendshipRepository(SQLAlchemyRepository):
+class FriendRepository(SQLAlchemyRepository):
 
     def __init__(self):
-        super().__init__(Friendship)
+        super().__init__(Friend)
 
     def get(self, user_id_1, user_id_2):
-        return Friendship.query.filter_by(
+        """Retourne la relation entre deux utilisateurs (ordre normalisé côté facade)."""
+        return Friend.query.filter_by(
             user_id_1=user_id_1, user_id_2=user_id_2
         ).first()
 
     def get_with_status(self, user_id_1, user_id_2, status):
-        return Friendship.query.filter_by(
+        return Friend.query.filter_by(
             user_id_1=user_id_1, user_id_2=user_id_2, status=status
         ).first()
 
     def get_accepted(self, user_id):
         return (
-            Friendship.query
-            .options(joinedload(Friendship.user1), joinedload(Friendship.user2))
+            Friend.query
+            .options(joinedload(Friend.user1), joinedload(Friend.user2))
             .filter(
-                Friendship.status == 'accepted',
-                (Friendship.user_id_1 == user_id) | (Friendship.user_id_2 == user_id)
+                Friend.status == 'accepted',
+                (Friend.user_id_1 == user_id) | (Friend.user_id_2 == user_id)
             )
             .all()
         )
 
     def get_pending_received(self, user_id):
-        """Demandes en attente reçues par user_id (envoyées par quelqu'un d'autre)."""
+        """Demandes en attente dont user_id est la cible (user_id_2 selon la convention)."""
         return (
-            Friendship.query
-            .options(joinedload(Friendship.action_user))
+            Friend.query
+            .options(joinedload(Friend.user1))
             .filter(
-                Friendship.status == 'pending',
-                Friendship.action_user_id != user_id,
-                (Friendship.user_id_1 == user_id) | (Friendship.user_id_2 == user_id)
+                Friend.status == 'pending',
+                Friend.user_id_2 == user_id
             )
             .all()
         )
@@ -266,7 +305,43 @@ class FavoriteGameRepository(SQLAlchemyRepository):
         """Retourne les objets Game favoris d'un utilisateur via un JOIN direct."""
         return (
             db.session.query(Game)
-            .join(FavoriteGame, Game.game_id == FavoriteGame.game_id)
+            .join(FavoriteGame, Game.id == FavoriteGame.game_id)
             .filter(FavoriteGame.user_id == user_id)
             .all()
         )
+
+
+# =============================================================================
+# POSTS
+# =============================================================================
+
+class PostRepository(SQLAlchemyRepository):
+
+    def __init__(self):
+        super().__init__(Post)
+
+    def get_recent(self, limit=20):
+        """Retourne les posts les plus récents pour le fil d'actualité."""
+        return (
+            Post.query
+            .options(joinedload(Post.author))
+            .order_by(Post.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+
+
+# =============================================================================
+# REVIEWS
+# =============================================================================
+
+class ReviewRepository(SQLAlchemyRepository):
+
+    def __init__(self):
+        super().__init__(Review)
+
+    def get_by_event(self, event_id):
+        return Review.query.filter_by(event_id=event_id).all()
+
+    def get_by_reviewed_user(self, reviewed_user_id):
+        return Review.query.filter_by(reviewed_user_id=reviewed_user_id).all()
