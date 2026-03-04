@@ -23,14 +23,19 @@ parameters:
   - in: query
     name: date
     type: string
+    description: "Date ISO 8601 (ex: 2024-12-25)"
 responses:
   200:
     description: List of events
+  400:
+    description: Invalid date format
 """
     city = request.args.get('city')
     date = request.args.get('date')
 
-    events = facade.get_events(city=city, date=date)
+    events, error = facade.get_events(city=city, date=date)
+    if error:
+        return jsonify({"error": error}), 400
     return jsonify({"success": True, "data": events}), 200
 
 
@@ -60,8 +65,8 @@ parameters:
         - game_id
         - city
         - location_text
-        - event_start
-        - max_participants
+        - date_time
+        - max_players
       properties:
         title:
           type: string
@@ -71,33 +76,33 @@ parameters:
           type: string
         location_text:
           type: string
-        event_start:
+        date_time:
           type: string
-        max_participants:
+          description: "ISO 8601 (ex: 2024-12-25T19:00:00)"
+        max_players:
           type: integer
 responses:
   201:
     description: Event created
+  400:
+    description: Invalid input
   401:
     description: Unauthorized
 """
-
     current_user_id = get_jwt_identity()
     data = request.get_json()
 
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 
-    # Champs obligatoires
-    required = ['title', 'game_id', 'city', 'location_text', 'event_start', 'max_participants']
+    required = ['title', 'game_id', 'city', 'location_text', 'date_time', 'max_players']
     for field in required:
         if field not in data:
             return jsonify({"error": f"Champ '{field}' manquant"}), 400
 
-    new_event = facade.create_event(data, current_user_id)
-
-    if "error" in new_event:
-        return jsonify({"error": new_event["error"]}), 400
+    new_event, error = facade.create_event(data, current_user_id)
+    if error:
+        return jsonify({"error": error}), 400
 
     return jsonify({"success": True, "data": new_event}), 201
 
@@ -152,8 +157,12 @@ def update_event(event_id):
     responses:
       200:
         description: Event updated
+      400:
+        description: Invalid input
       403:
         description: Forbidden
+      404:
+        description: Event not found
     """
     current_user_id = get_jwt_identity()
     data = request.get_json()
@@ -165,17 +174,15 @@ def update_event(event_id):
     if not event:
         return jsonify({"error": "Événement introuvable"}), 404
 
-    # Seulement le créateur peut modifier
     if event['creator_id'] != current_user_id:
         return jsonify({"error": "Vous n'êtes pas le créateur de cet événement"}), 403
 
-    # Pas de modif sur un event annulé ou terminé
     if event['status'] in ['cancelled', 'completed']:
         return jsonify({"error": "Impossible de modifier un événement annulé ou terminé"}), 400
 
-    updated_event = facade.update_event(event_id, data)
-    if not updated_event:
-        return jsonify({"error": "Erreur lors de la mise à jour"}), 500
+    updated_event, error = facade.update_event(event_id, data)
+    if error:
+        return jsonify({"error": error}), 400
 
     return jsonify({"success": True, "data": updated_event}), 200
 
@@ -201,6 +208,10 @@ def cancel_event(event_id):
     responses:
       200:
         description: Event cancelled
+      403:
+        description: Forbidden
+      404:
+        description: Event not found
     """
     current_user_id = get_jwt_identity()
 
@@ -208,14 +219,14 @@ def cancel_event(event_id):
     if not event:
         return jsonify({"error": "Événement introuvable"}), 404
 
-    # Seulement le créateur peut annuler
     if event['creator_id'] != current_user_id:
         return jsonify({"error": "Vous n'êtes pas le créateur de cet événement"}), 403
 
     if event['status'] == 'cancelled':
         return jsonify({"error": "Cet événement est déjà annulé"}), 400
 
-    result, error = facade.cancel_event(event_id, current_user_id)
+    # cancel_event ne prend plus user_id (auth déjà vérifiée ci-dessus)
+    result, error = facade.cancel_event(event_id)
     if error:
         return jsonify({"error": error}), 400
 
@@ -243,6 +254,10 @@ def join_event(event_id):
     responses:
       201:
         description: Joined event
+      400:
+        description: Cannot join
+      404:
+        description: Event not found
     """
     current_user_id = get_jwt_identity()
 
@@ -250,7 +265,6 @@ def join_event(event_id):
     if not event:
         return jsonify({"error": "Événement introuvable"}), 404
 
-    # Le créateur ne peut pas rejoindre son propre event
     if event['creator_id'] == current_user_id:
         return jsonify({"error": "Vous êtes déjà le créateur de cet événement"}), 400
 
@@ -285,6 +299,10 @@ def leave_event(event_id):
     responses:
       200:
         description: Left event
+      400:
+        description: Cannot leave
+      404:
+        description: Event not found
     """
     current_user_id = get_jwt_identity()
 
@@ -292,7 +310,6 @@ def leave_event(event_id):
     if not event:
         return jsonify({"error": "Événement introuvable"}), 404
 
-    # Le créateur ne peut pas quitter son propre event
     if event['creator_id'] == current_user_id:
         return jsonify({"error": "Vous êtes le créateur, annulez l'événement si besoin"}), 400
 
@@ -321,6 +338,8 @@ def get_event_comments(event_id):
     responses:
       200:
         description: List of comments
+      404:
+        description: Event not found
     """
     event = facade.get_event_details(event_id)
     if not event:
@@ -351,6 +370,10 @@ def add_event_comment(event_id):
     responses:
       201:
         description: Comment added
+      400:
+        description: Missing content
+      404:
+        description: Event not found
     """
     current_user_id = get_jwt_identity()
     data = request.get_json()

@@ -29,14 +29,14 @@ responses:
 
     user = facade.get_user(current_user_id)
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Utilisateur introuvable"}), 404
 
     return jsonify({"success": True, "data": user}), 200
 
 
 # -----------------------------------------------
 # PUT /users/me → modifier son profil
-# Champs modifiables : username, city, region, bio, profile_image_url
+# Champs modifiables : first_name, last_name, username, city, region, bio, profile_image_url
 # -----------------------------------------------
 @api_v1.route('/users/me', methods=['PUT'])
 @jwt_required()
@@ -57,6 +57,10 @@ parameters:
     schema:
       type: object
       properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
         username:
           type: string
         city:
@@ -78,9 +82,10 @@ responses:
     if not data:
         return jsonify({"error": "Aucune donnée envoyée"}), 400
 
-    updated_user = facade.update_user_profile(current_user_id, data)
-    if not updated_user:
-        return jsonify({"error": "User not found"}), 404
+    updated_user, error = facade.update_user_profile(current_user_id, data)
+    if error:
+        status = 404 if "introuvable" in error else 400
+        return jsonify({"error": error}), status
 
     return jsonify({"success": True, "data": updated_user}), 200
 
@@ -145,11 +150,11 @@ def get_user_profile(user_id):
       200:
         description: User profile
       404:
-        description: User not found
+        description: Utilisateur introuvable
     """
     user = facade.get_user(user_id)
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Utilisateur introuvable"}), 404
 
     return jsonify({"success": True, "data": user}), 200
 

@@ -78,9 +78,6 @@ def send_friend_request(receiver_id):
     """
     current_user_id = get_jwt_identity()
 
-    if current_user_id == receiver_id:
-        return jsonify({"error": "Vous ne pouvez pas vous ajouter vous-même"}), 400
-
     result, error = facade.add_friend(current_user_id, receiver_id)
     if error:
         return jsonify({"error": error}), 400

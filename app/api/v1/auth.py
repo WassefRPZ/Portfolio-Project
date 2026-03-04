@@ -8,7 +8,7 @@ facade = BoardGameFacade()
 
 # -----------------------------------------------
 # POST /auth/register
-# Body: { username, email, password, city, region, bio }
+# Body: { username, email, password, city, first_name?, last_name?, region?, bio? }
 # -----------------------------------------------
 @api_v1.route('/auth/register', methods=['POST'])
 def register():
@@ -43,6 +43,12 @@ parameters:
         city:
           type: string
           example: Paris
+        first_name:
+          type: string
+          example: Nina
+        last_name:
+          type: string
+          example: Dupont
 responses:
   201:
     description: User registered
@@ -58,22 +64,20 @@ responses:
     if error:
         return jsonify({"error": error}), 400
 
-
     access_token = create_access_token(
         identity=str(user['user_id']),
         additional_claims={
             'username': user['username'],
-            'email': user['email'],
-            # On vérifie si le rôle est 'admin'
-            'is_admin': (user.get('role') == 'admin') 
+            'email':    user['email'],
+            'is_admin': user.get('is_admin', False),
         }
     )
 
     return jsonify({
         "success": True,
         "data": {
-            "user": user,
-            "access_token": access_token
+            "user":         user,
+            "access_token": access_token,
         }
     }), 201
 
@@ -116,7 +120,7 @@ def login():
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 
-    email = data.get('email')
+    email    = data.get('email')
     password = data.get('password')
 
     if not email or not password:
@@ -127,21 +131,19 @@ def login():
     if not user:
         return jsonify({"error": "Email ou mot de passe incorrect"}), 401
 
-
     access_token = create_access_token(
         identity=str(user['user_id']),
         additional_claims={
             'username': user['username'],
-            'email': user['email'],
-            # On vérifie si le rôle est 'admin'
-            'is_admin': (user.get('role') == 'admin') 
+            'email':    user['email'],
+            'is_admin': user.get('is_admin', False),
         }
     )
 
     return jsonify({
         "success": True,
         "data": {
-            "user": user,
-            "access_token": access_token
+            "user":         user,
+            "access_token": access_token,
         }
     }), 200
