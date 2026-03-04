@@ -275,13 +275,14 @@ class FriendRepository(SQLAlchemyRepository):
         )
 
     def get_pending_received(self, user_id):
-        """Demandes en attente dont user_id est la cible (user_id_2 selon la convention)."""
+        """Demandes en attente reçues par user_id (il est dans la relation mais n'est pas l'expéditeur)."""
         return (
             Friend.query
-            .options(joinedload(Friend.user1))
+            .options(joinedload(Friend.requester))
             .filter(
                 Friend.status == 'pending',
-                Friend.user_id_2 == user_id
+                (Friend.user_id_1 == user_id) | (Friend.user_id_2 == user_id),
+                Friend.requester_id != user_id,
             )
             .all()
         )

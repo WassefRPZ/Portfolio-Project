@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models import (
@@ -42,6 +43,9 @@ class BoardGameFacade:
         if len(data['password']) < 8:
             return None, "Le mot de passe doit contenir au minimum 8 caractères"
 
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', data['email']):
+            return None, "Format d'email invalide"
+
         if self.users.get_by_email(data['email']):
             return None, "Cet email est déjà utilisé"
 
@@ -75,8 +79,8 @@ class BoardGameFacade:
     def login_user(self, email, password):
         user = self.users.get_by_email(email)
         if user and check_password_hash(user.password_hash, password):
-            return user.to_dict()
-        return None
+            return user.to_dict(), None
+        return None, "Email ou mot de passe incorrect"
 
     # ==========================================
     # UTILISATEURS
@@ -177,6 +181,9 @@ class BoardGameFacade:
             event_date_time = datetime.fromisoformat(data['date_time'])
         except (ValueError, TypeError):
             return None, "Format de date invalide. Utiliser ISO 8601 (ex: 2024-12-25T19:00:00)"
+
+        if event_date_time <= datetime.utcnow():
+            return None, "La date de l'événement doit être dans le futur"
 
         event = Event(
             creator_id=creator_id,
@@ -314,7 +321,7 @@ class BoardGameFacade:
         pending = self.friends.get_pending_received(user_id)
         result = []
         for f in pending:
-            requester = f.user1  # user_id_1 est l'expéditeur (convention du tri)
+            requester = f.requester
             if requester:
                 result.append({
                     "friendship": f.to_dict(),
@@ -337,6 +344,7 @@ class BoardGameFacade:
         friendship = Friend(
             user_id_1=user_id_1,
             user_id_2=user_id_2,
+            requester_id=requester_id,
             status='pending',
         )
         self.friends.save(friendship)
@@ -360,9 +368,8 @@ class BoardGameFacade:
         if not friendship:
             return None, "Demande introuvable"
 
-        friendship.status = 'declined'
-        self.friends.commit()
-        return friendship.to_dict(), None
+        self.friends.delete(friendship)
+        return {"success": True}, None
 
     def remove_friend(self, current_user_id, friend_id):
         user_id_1, user_id_2 = sorted([current_user_id, friend_id])
@@ -400,6 +407,29 @@ class BoardGameFacade:
         return {"success": True}, None
 
     # ==========================================
+    # PUBLICATIONS
+    # ==========================================
+
+    def create_post(self, author_id, content):
+        if not content or not content.strip():
+            return None, "Le contenu ne peut pas être vide"
+
+        post = Post(author_id=author_id, content=content.strip())
+        self.posts.save(post)
+        return post.to_dict(), None
+
+    def delete_post(self, post_id, user_id):
+        post = Post.query.filter_by(id=post_id).first()
+        if not post:
+            return None, "Publication introuvable"
+
+        if post.author_id != user_id:
+            return None, "Vous ne pouvez supprimer que vos propres publications"
+
+        self.posts.delete(post)
+        return {"success": True}, None
+
+    # ==========================================
     # JEUX
     # ==========================================
 
@@ -414,7 +444,8 @@ class BoardGameFacade:
         return self.games.get_by_name(name)
 
     def get_game_by_api_id(self, id_api):
-        return self.games.get_by_api_id(id_api)
+        game = self.games.get_by_api_id(id_api)
+        return game.to_dict() if game else None
 
     def search_games(self, query):
         return [g.to_dict() for g in self.games.search(query)]
@@ -428,6 +459,9 @@ class BoardGameFacade:
         return popular
 
     def create_game(self, data):
+        if data['min_players'] < 1 or data['max_players'] < 1:
+            return None, "min_players et max_players doivent être supérieurs ou égaux à 1"
+
         if data['min_players'] > data['max_players']:
             return None, "min_players ne peut pas dépasser max_players"
 

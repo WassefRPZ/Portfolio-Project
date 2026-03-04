@@ -126,10 +126,10 @@ def login():
     if not email or not password:
         return jsonify({"error": "Email et mot de passe requis"}), 400
 
-    user = facade.login_user(email, password)
+    user, error = facade.login_user(email, password)
 
-    if not user:
-        return jsonify({"error": "Email ou mot de passe incorrect"}), 401
+    if error:
+        return jsonify({"error": error}), 401
 
     access_token = create_access_token(
         identity=user['id'],  # INT — utilisé comme identité JWT
