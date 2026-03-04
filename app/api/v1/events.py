@@ -63,7 +63,6 @@ parameters:
       required:
         - title
         - game_id
-        - city
         - location_text
         - date_time
         - max_players
@@ -72,10 +71,9 @@ parameters:
           type: string
         game_id:
           type: integer
-        city:
-          type: string
         location_text:
           type: string
+          description: "Adresse complète — ville et région extraites automatiquement via OpenCage"
         date_time:
           type: string
           description: "ISO 8601 (ex: 2024-12-25T19:00:00)"
@@ -95,7 +93,7 @@ responses:
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 
-    required = ['title', 'game_id', 'city', 'location_text', 'date_time', 'max_players']
+    required = ['title', 'game_id', 'location_text', 'date_time', 'max_players']
     for field in required:
         if field not in data:
             return jsonify({"error": f"Champ '{field}' manquant"}), 400

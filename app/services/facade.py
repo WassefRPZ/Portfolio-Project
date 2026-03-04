@@ -1,5 +1,7 @@
 from datetime import datetime
+import os
 import re
+import requests
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models import (
@@ -30,6 +32,58 @@ class BoardGameFacade:
         self.favorites    = FavoriteGameRepository()
         self.posts        = PostRepository()
         self.reviews      = ReviewRepository()
+
+    # ==========================================
+    # GÉOCODAGE (interne)
+    # ==========================================
+
+    def _geocode(self, location_text):
+        """Appelle OpenCage Geocoding API pour obtenir lat, lng, city et region.
+        Retourne (dict, None) en succès ou (None, "message d'erreur") en échec.
+        """
+        api_key = os.getenv('OPENCAGE_API_KEY')
+        if not api_key:
+            return None, "Clé API OpenCage manquante (OPENCAGE_API_KEY)"
+
+        try:
+            response = requests.get(
+                'https://api.opencagedata.com/geocode/v1/json',
+                params={
+                    'q':        location_text,
+                    'key':      api_key,
+                    'language': 'fr',
+                    'limit':    1,
+                },
+                timeout=5,
+            )
+            response.raise_for_status()
+            body = response.json()
+        except requests.exceptions.Timeout:
+            return None, "Délai dépassé lors de la requête à OpenCage"
+        except requests.exceptions.RequestException:
+            return None, "Erreur réseau lors de la requête à OpenCage"
+
+        results = body.get('results', [])
+        if not results:
+            return None, f"Adresse introuvable : '{location_text}'"
+
+        geometry   = results[0]['geometry']
+        components = results[0].get('components', {})
+
+        city = (
+            components.get('city')
+            or components.get('town')
+            or components.get('village')
+            or components.get('municipality', '')
+        )
+        region = components.get('state') or components.get('county', '')
+
+        return {
+            'latitude':  geometry['lat'],
+            'longitude': geometry['lng'],
+            'city':      city,
+            'region':    region,
+        }, None
 
     # ==========================================
     # AUTH
@@ -185,14 +239,20 @@ class BoardGameFacade:
         if event_date_time <= datetime.utcnow():
             return None, "La date de l'événement doit être dans le futur"
 
+        geo, error = self._geocode(data['location_text'])
+        if error:
+            return None, error
+
         event = Event(
             creator_id=creator_id,
             game_id=data['game_id'],
             title=data['title'],
             description=data.get('description', ''),
-            city=data['city'],
-            region=data.get('region', ''),
+            city=geo['city'],
+            region=geo['region'],
             location_text=data['location_text'],
+            latitude=geo['latitude'],
+            longitude=geo['longitude'],
             date_time=event_date_time,
             max_players=data['max_players'],
             cover_url=data.get('cover_url'),
@@ -213,7 +273,18 @@ class BoardGameFacade:
                     f"{current_count} participants sont déjà confirmés"
                 )
 
-        for field in ['title', 'description', 'city', 'region', 'location_text', 'max_players', 'cover_url']:
+        # Si l'adresse change → re-géocoder pour mettre à jour lat/lng, city, region
+        if 'location_text' in data and data['location_text'] != event.location_text:
+            geo, error = self._geocode(data['location_text'])
+            if error:
+                return None, error
+            event.location_text = data['location_text']
+            event.city          = geo['city']
+            event.region        = geo['region']
+            event.latitude      = geo['latitude']
+            event.longitude     = geo['longitude']
+
+        for field in ['title', 'description', 'max_players', 'cover_url']:
             if field in data:
                 setattr(event, field, data[field])
 
@@ -428,6 +499,62 @@ class BoardGameFacade:
 
         self.posts.delete(post)
         return {"success": True}, None
+
+    # ==========================================
+    # AVIS
+    # ==========================================
+
+    def create_review(self, reviewer_id, data):
+        rating = data.get('rating')
+        event_id = data.get('event_id')
+        reviewed_user_id = data.get('reviewed_user_id')
+
+        if rating is None:
+            return None, "Le champ 'rating' est requis"
+
+        if not isinstance(rating, int) or not (1 <= rating <= 5):
+            return None, "La note doit être un entier entre 1 et 5"
+
+        # Exactement une cible doit être fournie
+        if event_id and reviewed_user_id:
+            return None, "Un avis ne peut cibler qu'un événement OU un joueur, pas les deux"
+
+        if not event_id and not reviewed_user_id:
+            return None, "Un avis doit cibler un événement (event_id) ou un joueur (reviewed_user_id)"
+
+        if event_id:
+            if not self.events.get_by_id(event_id):
+                return None, "Événement introuvable"
+
+        if reviewed_user_id:
+            if reviewed_user_id == reviewer_id:
+                return None, "Vous ne pouvez pas vous noter vous-même"
+            if not self.users.get_by_id(reviewed_user_id):
+                return None, "Utilisateur introuvable"
+
+        review = Review(
+            reviewer_id=reviewer_id,
+            event_id=event_id,
+            reviewed_user_id=reviewed_user_id,
+            rating=rating,
+            comment=data.get('comment', ''),
+        )
+        self.reviews.save(review)
+        return review.to_dict(), None
+
+    def get_reviews_by_user(self, user_id):
+        if not self.users.get_by_id(user_id):
+            return None, "Utilisateur introuvable"
+
+        reviews = self.reviews.get_by_reviewed_user(user_id)
+        return [r.to_dict() for r in reviews], None
+
+    def get_reviews_by_event(self, event_id):
+        if not self.events.get_by_id(event_id):
+            return None, "Événement introuvable"
+
+        reviews = self.reviews.get_by_event(event_id)
+        return [r.to_dict() for r in reviews], None
 
     # ==========================================
     # JEUX

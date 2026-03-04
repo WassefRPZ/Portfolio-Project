@@ -27,6 +27,8 @@ class Event(db.Model):
         default='open'
     )
     cover_url     = db.Column(db.String(255))          # URL Cloudinary (optionnel)
+    latitude      = db.Column(db.Float)                # latitude  (OpenCage Geocoding)
+    longitude     = db.Column(db.Float)                # longitude (OpenCage Geocoding)
     created_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
     creator      = db.relationship('User',             foreign_keys=[creator_id],
@@ -55,6 +57,8 @@ class Event(db.Model):
             "max_players":     self.max_players,
             "status":          self.status,
             "cover_url":       self.cover_url,
+            "latitude":        self.latitude,
+            "longitude":       self.longitude,
             "created_at":      self.created_at.isoformat() if self.created_at else None,
             "current_players": len(confirmed),
         }
