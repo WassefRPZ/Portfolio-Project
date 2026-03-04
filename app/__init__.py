@@ -1,14 +1,12 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flasgger import Swagger
 from config import Config
 
-db      = SQLAlchemy()
-migrate = Migrate()
-jwt     = JWTManager()
+db  = SQLAlchemy()
+jwt = JWTManager()
 
 
 def create_app():
@@ -17,7 +15,6 @@ def create_app():
 
     # Extensions
     db.init_app(app)
-    migrate.init_app(app, db)   # Flask-Migrate gère le schéma
     jwt.init_app(app)
     CORS(app)
 
@@ -56,10 +53,11 @@ def create_app():
     from app.api.v1 import api_v1
     app.register_blueprint(api_v1, url_prefix='/api/v1')
 
-    # Import explicite des modèles pour que Flask-Migrate les découvre tous
-    from app.models import (       # noqa: F401
+    from app.models import (  # noqa: F401
         User, Game, Event, EventParticipant, Comment, Friendship, FavoriteGame
     )
+    with app.app_context():
+        db.create_all()
 
     @app.route('/')
     def index():
