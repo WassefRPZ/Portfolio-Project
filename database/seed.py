@@ -17,10 +17,10 @@ if not SEED_ADMIN_PASSWORD:
 
 with app.app_context():
 
-    # ── ADMINS ──────────────────────────────────────────────────────────────────
+    # ADMINS
     admins = [
         {"username": "WarrenAdmin", "email": "warren@hb.com", "city": "Paris"},
-        {"username": "WassefAdmin", "email": "wassef@hb.com", "city": "Lyon"},
+        {"username": "WassefAdmin", "email": "wassef@hb.com", "city": "Frejus"},
         {"username": "NinaAdmin",   "email": "nina@hb.com",   "city": "Marseille"},
     ]
 
@@ -33,7 +33,7 @@ with app.app_context():
                 email=admin_data["email"],
                 password_hash=generate_password_hash(SEED_ADMIN_PASSWORD),
                 city=admin_data["city"],
-                region='',                          # cohérent avec register_user (pas NULL)
+                region='',
                 bio="Compte administrateur système",
                 is_admin=True,
             )
@@ -42,7 +42,7 @@ with app.app_context():
         else:
             print(f"  Admin existe déjà : {admin_data['username']}")
 
-    # ── JEUX ────────────────────────────────────────────────────────────────────
+    # JEUX
     games_data = [
         {"name": "Catan",          "description": "Commerce et stratégie.",   "min_players": 3, "max_players": 4,  "play_time_minutes": 90},
         {"name": "Dixit",          "description": "Jeu d'imagination.",        "min_players": 3, "max_players": 6,  "play_time_minutes": 30},
@@ -61,14 +61,14 @@ with app.app_context():
                 min_players=game_info["min_players"],
                 max_players=game_info["max_players"],
                 play_time_minutes=game_info["play_time_minutes"],
-                image_url=None,  # Pas d'URL hardcodée vers un service tiers
+                image_url=None,
             )
             db.session.add(new_game)
             print(f"  Jeu ajouté : {game_info['name']}")
         else:
             print(f"  Jeu existe déjà : {game_info['name']}")
 
-    # ── COMMIT ──────────────────────────────────────────────────────────────────
+    # COMMIT
     try:
         db.session.commit()
         print("\nSUCCESS: Base de données initialisée.")
