@@ -94,6 +94,8 @@ CREATE TABLE events (
     max_players   INT                 NOT NULL,
     status        ENUM('open', 'full', 'cancelled', 'completed') NOT NULL DEFAULT 'open',
     cover_url     VARCHAR(255),                  -- URL Cloudinary
+    latitude      FLOAT,                         -- latitude (OpenCage Geocoding)
+    longitude     FLOAT,                         -- longitude (OpenCage Geocoding)
     created_at    DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     -- Clé étrangère : suppression de l'organisateur → suppression de ses événements

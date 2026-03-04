@@ -32,3 +32,5 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
+
+    OPENCAGE_API_KEY = os.getenv("OPENCAGE_API_KEY", "")
