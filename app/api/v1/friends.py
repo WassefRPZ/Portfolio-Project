@@ -55,7 +55,7 @@ responses:
 # -----------------------------------------------
 # POST /friends/request/<receiver_id> → envoyer une demande
 # -----------------------------------------------
-@api_v1.route('/friends/request/<receiver_id>', methods=['POST'])
+@api_v1.route('/friends/request/<int:receiver_id>', methods=['POST'])
 @jwt_required()
 def send_friend_request(receiver_id):
     """
@@ -68,7 +68,7 @@ def send_friend_request(receiver_id):
     parameters:
       - name: receiver_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       201:
@@ -88,7 +88,7 @@ def send_friend_request(receiver_id):
 # -----------------------------------------------
 # POST /friends/accept/<requester_id> → accepter une demande
 # -----------------------------------------------
-@api_v1.route('/friends/accept/<requester_id>', methods=['POST'])
+@api_v1.route('/friends/accept/<int:requester_id>', methods=['POST'])
 @jwt_required()
 def accept_friend_request(requester_id):
     """
@@ -101,7 +101,7 @@ def accept_friend_request(requester_id):
     parameters:
       - name: requester_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -119,7 +119,7 @@ def accept_friend_request(requester_id):
 # -----------------------------------------------
 # POST /friends/decline/<requester_id> → refuser une demande
 # -----------------------------------------------
-@api_v1.route('/friends/decline/<requester_id>', methods=['POST'])
+@api_v1.route('/friends/decline/<int:requester_id>', methods=['POST'])
 @jwt_required()
 def decline_friend_request(requester_id):
     """
@@ -132,7 +132,7 @@ def decline_friend_request(requester_id):
     parameters:
       - name: requester_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -150,7 +150,7 @@ def decline_friend_request(requester_id):
 # -----------------------------------------------
 # DELETE /friends/<friend_id> → supprimer un ami
 # -----------------------------------------------
-@api_v1.route('/friends/<friend_id>', methods=['DELETE'])
+@api_v1.route('/friends/<int:friend_id>', methods=['DELETE'])
 @jwt_required()
 def remove_friend(friend_id):
     """
@@ -163,7 +163,7 @@ def remove_friend(friend_id):
     parameters:
       - name: friend_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
