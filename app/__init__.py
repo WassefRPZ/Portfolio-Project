@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flasgger import Swagger
+import cloudinary
 from config import Config
 
 db  = SQLAlchemy()
@@ -12,6 +13,14 @@ jwt = JWTManager()
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    # Cloudinary SDK configuration
+    cloudinary.config(
+        cloud_name  = app.config.get("CLOUDINARY_CLOUD_NAME"),
+        api_key     = app.config.get("CLOUDINARY_API_KEY"),
+        api_secret  = app.config.get("CLOUDINARY_API_SECRET"),
+        secure      = True,
+    )
 
     # Extensions
     db.init_app(app)

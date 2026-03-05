@@ -49,36 +49,46 @@ tags:
 security:
   - Bearer: []
 consumes:
+  - multipart/form-data
   - application/json
 parameters:
-  - in: body
-    name: body
-    required: true
-    schema:
-      type: object
-      properties:
-        username:
-          type: string
-        city:
-          type: string
-        region:
-          type: string
-        bio:
-          type: string
-        profile_image_url:
-          type: string
+  - in: formData
+    name: image
+    type: file
+    description: "Image de profil (JPEG/PNG) — upload vers Cloudinary"
+  - in: formData
+    name: username
+    type: string
+  - in: formData
+    name: city
+    type: string
+  - in: formData
+    name: region
+    type: string
+  - in: formData
+    name: bio
+    type: string
 responses:
   200:
     description: Profile updated
+  400:
+    description: Invalid data or upload error
 """
 
     current_user_id = get_jwt_identity()
-    data = request.get_json()
 
-    if not data:
+    # Support multipart/form-data (avec fichier) ou application/json (sans fichier)
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form.to_dict()
+        image_file = request.files.get('image')
+    else:
+        data = request.get_json() or {}
+        image_file = None
+
+    if not data and not image_file:
         return jsonify({"error": "Aucune donnée envoyée"}), 400
 
-    updated_user, error = facade.update_user_profile(current_user_id, data)
+    updated_user, error = facade.update_user_profile(current_user_id, data, image_file)
     if error:
         status = 404 if "introuvable" in error else 400
         return jsonify({"error": error}), status

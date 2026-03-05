@@ -191,6 +191,23 @@ class EventRepository(SQLAlchemyRepository):
             .all()
         )
 
+    def search(self, query):
+        """Recherche par mot-clé dans title et description (événements ouverts uniquement)."""
+        pattern = f'%{query}%'
+        return (
+            Event.query
+            .filter(
+                Event.status == 'open',
+                db.or_(
+                    Event.title.like(pattern),
+                    Event.description.like(pattern),
+                )
+            )
+            .order_by(Event.date_time)
+            .limit(20)
+            .all()
+        )
+
 
 # =============================================================================
 # EVENT PARTICIPANTS

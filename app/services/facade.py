@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 import re
 import requests
+import cloudinary.uploader
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models import (
@@ -86,6 +87,95 @@ class BoardGameFacade:
         }, None
 
     # ==========================================
+    # BOARDGAMEGEEK (interne)
+    # ==========================================
+
+    def _fetch_bgg_game(self, bgg_id):
+        """Appelle BoardGameGeek XML API 2 pour récupérer les données d'un jeu par son ID.
+        Retourne (dict, None) en succès ou (None, "message d'erreur") en échec.
+        """
+        import xml.etree.ElementTree as ET
+
+        try:
+            response = requests.get(
+                'https://boardgamegeek.com/xmlapi2/thing',
+                params={'id': bgg_id, 'stats': 1},
+                timeout=10,
+            )
+            response.raise_for_status()
+        except requests.exceptions.Timeout:
+            return None, "Délai dépassé lors de la requête à BoardGameGeek"
+        except requests.exceptions.RequestException:
+            return None, "Erreur réseau lors de la requête à BoardGameGeek"
+
+        try:
+            root = ET.fromstring(response.text)
+        except ET.ParseError:
+            return None, "Réponse invalide de BoardGameGeek"
+
+        item = root.find('item')
+        if item is None:
+            return None, f"Jeu introuvable sur BoardGameGeek : ID '{bgg_id}'"
+
+        name_el = item.find("name[@type='primary']")
+        name = name_el.get('value', '') if name_el is not None else ''
+
+        desc_el = item.find('description')
+        description = (desc_el.text or '') if desc_el is not None else ''
+
+        min_el = item.find('minplayers')
+        max_el = item.find('maxplayers')
+        min_players = max(int(min_el.get('value', 1)), 1) if min_el is not None else 1
+        max_players = max(int(max_el.get('value', 1)), 1) if max_el is not None else 1
+
+        time_el = item.find('playingtime')
+        play_time = int(time_el.get('value', 30)) if time_el is not None else 30
+        if play_time == 0:
+            play_time = 30
+
+        img_el = item.find('image')
+        image_url = ''
+        if img_el is not None and img_el.text:
+            image_url = img_el.text.strip()
+            if image_url.startswith('//'):
+                image_url = 'https:' + image_url
+
+        return {
+            'id_api':            str(bgg_id),
+            'name':              name,
+            'description':       description,
+            'min_players':       min_players,
+            'max_players':       max_players,
+            'play_time_minutes': play_time,
+            'image_url':         image_url,
+        }, None
+
+    # ==========================================
+    # CLOUDINARY (interne)
+    # ==========================================
+
+    def _upload_to_cloudinary(self, file, folder=None):
+        """Envoie un fichier image vers Cloudinary et retourne l'URL sécurisée.
+        Retourne (url, None) en succès ou (None, "message d'erreur") en échec.
+        """
+        options = {'resource_type': 'image'}
+        if folder:
+            options['folder'] = folder
+
+        try:
+            result = cloudinary.uploader.upload(file, **options)
+        except cloudinary.exceptions.Error as exc:
+            return None, f"Cloudinary : {str(exc)}"
+        except Exception as exc:
+            return None, f"Erreur lors de l'upload : {str(exc)}"
+
+        url = result.get('secure_url')
+        if not url:
+            return None, "Cloudinary n'a pas retourné d'URL"
+
+        return url, None
+
+    # ==========================================
     # AUTH
     # ==========================================
 
@@ -157,7 +247,7 @@ class BoardGameFacade:
         user_data['favorite_games'] = self.get_favorite_games(user_id)
         return user_data
 
-    def update_user_profile(self, user_id, data):
+    def update_user_profile(self, user_id, data, image_file=None):
         user = self.users.get_by_id(user_id)
         if not user:
             return None, "Utilisateur introuvable"
@@ -170,6 +260,13 @@ class BoardGameFacade:
             if self.profiles.get_by_username(data['username']):
                 return None, "Ce nom d'utilisateur est déjà pris"
 
+        # Upload image de profil si fournie
+        if image_file:
+            url, error = self._upload_to_cloudinary(image_file, folder='profiles')
+            if error:
+                return None, error
+            data['profile_image_url'] = url
+
         for field in ['username', 'bio', 'city', 'region', 'profile_image_url']:
             if field in data:
                 setattr(profile, field, data[field])
@@ -180,6 +277,12 @@ class BoardGameFacade:
 
     def search_users(self, query, city=None):
         return [u.to_dict() for u in self.users.search(query, city)]
+
+    def global_search(self, query):
+        """Recherche simultanée dans les utilisateurs (username) et les événements ouverts (title/description)."""
+        users  = [u.to_dict() for u in self.users.search(query)]
+        events = [e.to_dict() for e in self.events.search(query)]
+        return {"users": users, "events": events}
 
     def get_user_events(self, user_id):
         # Événements créés
@@ -227,7 +330,7 @@ class BoardGameFacade:
             event_data['creator'] = event.creator.to_dict()
         return event_data
 
-    def create_event(self, data, creator_id):
+    def create_event(self, data, creator_id, image_file=None):
         if not self.games.get_by_id(data['game_id']):
             return None, "Ce jeu n'existe pas"
 
@@ -243,6 +346,13 @@ class BoardGameFacade:
         if error:
             return None, error
 
+        # Upload image de couverture si fournie
+        cover_url = data.get('cover_url')
+        if image_file:
+            cover_url, error = self._upload_to_cloudinary(image_file, folder='events')
+            if error:
+                return None, error
+
         event = Event(
             creator_id=creator_id,
             game_id=data['game_id'],
@@ -255,7 +365,7 @@ class BoardGameFacade:
             longitude=geo['longitude'],
             date_time=event_date_time,
             max_players=data['max_players'],
-            cover_url=data.get('cover_url'),
+            cover_url=cover_url,
         )
         self.events.save(event)
         return event.to_dict(), None
@@ -586,20 +696,43 @@ class BoardGameFacade:
         return popular
 
     def create_game(self, data):
-        if data['min_players'] < 1 or data['max_players'] < 1:
-            return None, "min_players et max_players doivent être supérieurs ou égaux à 1"
+        id_api = str(data.get('id_api', '')).strip()
+        if not id_api:
+            return None, "Le champ 'id_api' est requis"
 
-        if data['min_players'] > data['max_players']:
-            return None, "min_players ne peut pas dépasser max_players"
+        # Éviter les doublons en base
+        if self.games.get_by_api_id(id_api):
+            return None, "Ce jeu existe déjà en base (id_api déjà présent)"
+
+        # Si les champs manuels sont fournis, les utiliser directement (fallback BGG)
+        manual_required = ['name', 'min_players', 'max_players', 'play_time_minutes']
+        if all(data.get(f) is not None for f in manual_required):
+            game_data = {
+                'id_api':            id_api,
+                'name':              data['name'],
+                'description':       data.get('description', ''),
+                'min_players':       int(data['min_players']),
+                'max_players':       int(data['max_players']),
+                'play_time_minutes': int(data['play_time_minutes']),
+                'image_url':         data.get('image_url', ''),
+            }
+        else:
+            # Récupérer les données depuis BoardGameGeek
+            game_data, error = self._fetch_bgg_game(id_api)
+            if error:
+                return None, (
+                    f"{error}. Vous pouvez aussi fournir les données manuellement "
+                    f"(name, min_players, max_players, play_time_minutes)."
+                )
 
         game = Game(
-            id_api=data['id_api'],
-            name=data['name'],
-            description=data.get('description', ''),
-            min_players=data['min_players'],
-            max_players=data['max_players'],
-            play_time_minutes=data['play_time_minutes'],
-            image_url=data.get('image_url', ''),
+            id_api=game_data['id_api'],
+            name=game_data['name'],
+            description=game_data['description'],
+            min_players=game_data['min_players'],
+            max_players=game_data['max_players'],
+            play_time_minutes=game_data['play_time_minutes'],
+            image_url=game_data['image_url'],
         )
         self.games.save(game)
         return game.to_dict(), None

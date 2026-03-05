@@ -134,14 +134,14 @@ def get_game_events(game_id):
 
 
 # -----------------------------------------------
-# POST /games → ajouter un jeu (admin seulement)
-# Body: { name, description?, min_players, max_players, play_time_minutes, image_url? }
+# POST /games → ajouter un jeu via Board Game Atlas (admin seulement)
+# Body: { id_api }  — toutes les autres infos sont récupérées depuis l'API externe
 # -----------------------------------------------
 @api_v1.route('/games', methods=['POST'])
 @jwt_required()
 def create_game():
     """
-    Create a new game (Admin only)
+    Create a new game from BoardGameGeek (Admin only)
     ---
     tags:
       - Games
@@ -157,20 +157,18 @@ def create_game():
           type: object
           required:
             - id_api
-            - name
-            - min_players
-            - max_players
-            - play_time_minutes
           properties:
             id_api:
-              type: string
-              example: "TAAifFP590"
+              type: integer
+              description: "Identifiant BoardGameGeek (ex: 13 pour Catan, 68448 pour 7 Wonders)"
+              example: 13
             name:
               type: string
+              description: "Fallback manuel si BGG est inaccessible"
               example: "Catan"
             description:
               type: string
-              example: "Jeu de stratégie"
+              example: "Le jeu de plateau classique"
             min_players:
               type: integer
               example: 3
@@ -182,12 +180,12 @@ def create_game():
               example: 90
             image_url:
               type: string
-              example: "http://image.com/catan.jpg"
+              example: ""
     responses:
       201:
-        description: Game created
+        description: "Game created (BGG auto ou données manuelles si name/min_players/max_players/play_time_minutes fournis)"
       400:
-        description: Invalid input
+        description: id_api manquant, introuvable sur BGG, ou jeu déjà en base
       403:
         description: Admin only
     """
@@ -196,17 +194,8 @@ def create_game():
         return jsonify({"error": "Action réservée aux administrateurs"}), 403
 
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "Pas de données envoyées"}), 400
-
-    required = ['id_api', 'name', 'min_players', 'max_players', 'play_time_minutes']
-    for field in required:
-        if field not in data:
-            return jsonify({"error": f"Champ '{field}' manquant"}), 400
-
-    existing = facade.get_game_by_name(data['name'])
-    if existing:
-        return jsonify({"error": "Ce jeu existe déjà"}), 400
+    if not data or not data.get('id_api'):
+        return jsonify({"error": "Le champ 'id_api' est requis"}), 400
 
     new_game, error = facade.create_game(data)
     if error:

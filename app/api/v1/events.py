@@ -53,42 +53,62 @@ tags:
 security:
   - Bearer: []
 consumes:
+  - multipart/form-data
   - application/json
 parameters:
-  - in: body
-    name: body
+  - in: formData
+    name: cover
+    type: file
+    description: "Image de couverture (JPEG/PNG) — upload vers Cloudinary"
+  - in: formData
+    name: title
+    type: string
     required: true
-    schema:
-      type: object
-      required:
-        - title
-        - game_id
-        - location_text
-        - date_time
-        - max_players
-      properties:
-        title:
-          type: string
-        game_id:
-          type: integer
-        location_text:
-          type: string
-          description: "Adresse complète — ville et région extraites automatiquement via OpenCage"
-        date_time:
-          type: string
-          description: "ISO 8601 (ex: 2024-12-25T19:00:00)"
-        max_players:
-          type: integer
+  - in: formData
+    name: game_id
+    type: integer
+    required: true
+  - in: formData
+    name: location_text
+    type: string
+    required: true
+    description: "Adresse complète — ville et région extraites automatiquement via OpenCage"
+  - in: formData
+    name: date_time
+    type: string
+    required: true
+    description: "ISO 8601 (ex: 2024-12-25T19:00:00)"
+  - in: formData
+    name: max_players
+    type: integer
+    required: true
+  - in: formData
+    name: description
+    type: string
 responses:
   201:
     description: Event created
   400:
-    description: Invalid input
+    description: Invalid input or upload error
   401:
     description: Unauthorized
 """
     current_user_id = get_jwt_identity()
-    data = request.get_json()
+
+    # Support multipart/form-data (avec fichier) ou application/json (sans fichier)
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form.to_dict()
+        image_file = request.files.get('cover')
+        # Convertir les champs entiers (form-data envoie tout en string)
+        for int_field in ['game_id', 'max_players']:
+            if int_field in data:
+                try:
+                    data[int_field] = int(data[int_field])
+                except ValueError:
+                    return jsonify({"error": f"'{int_field}' doit être un entier"}), 400
+    else:
+        data = request.get_json()
+        image_file = None
 
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
@@ -98,7 +118,7 @@ responses:
         if field not in data:
             return jsonify({"error": f"Champ '{field}' manquant"}), 400
 
-    new_event, error = facade.create_event(data, current_user_id)
+    new_event, error = facade.create_event(data, current_user_id, image_file)
     if error:
         return jsonify({"error": error}), 400
 
