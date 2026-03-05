@@ -26,7 +26,7 @@ class Event(db.Model):
         db.Enum('open', 'full', 'cancelled', 'completed'),
         default='open'
     )
-    cover_url     = db.Column(db.String(255))          # URL Cloudinary (optionnel)
+    cover_url     = db.Column(db.String(255))    
     latitude      = db.Column(db.Float)                # latitude  (OpenCage Geocoding)
     longitude     = db.Column(db.Float)                # longitude (OpenCage Geocoding)
     created_at    = db.Column(db.DateTime, default=datetime.utcnow)

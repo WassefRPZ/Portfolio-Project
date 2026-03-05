@@ -17,9 +17,6 @@ class SQLAlchemyRepository:
     def __init__(self, model):
         self.model = model
 
-    def get_all(self):
-        return self.model.query.all()
-
     def save(self, obj):
         """Ajoute l'objet en session et commit immédiatement."""
         db.session.add(obj)
@@ -50,15 +47,6 @@ class UserRepository(SQLAlchemyRepository):
 
     def get_by_email(self, email):
         return User.query.filter_by(email=email).first()
-
-    def get_by_username(self, username):
-        """Cherche un utilisateur via son profil (username est dans profiles)."""
-        return (
-            User.query
-            .join(Profile, User.id == Profile.user_id)
-            .filter(Profile.username == username)
-            .first()
-        )
 
     def search(self, query, city=None):
         """Recherche par username ou ville via join avec profiles."""
@@ -266,7 +254,7 @@ class FriendRepository(SQLAlchemyRepository):
         super().__init__(Friend)
 
     def get(self, user_id_1, user_id_2):
-        """Retourne la relation entre deux utilisateurs (ordre normalisé côté facade)."""
+        """Retourne la relation entre deux utilisateurs."""
         return Friend.query.filter_by(
             user_id_1=user_id_1, user_id_2=user_id_2
         ).first()
@@ -288,7 +276,7 @@ class FriendRepository(SQLAlchemyRepository):
         )
 
     def get_pending_received(self, user_id):
-        """Demandes en attente reçues par user_id (il est dans la relation mais n'est pas l'expéditeur)."""
+        """Demandes en attente reçues par user_id."""
         return (
             Friend.query
             .options(joinedload(Friend.requester))
@@ -301,7 +289,7 @@ class FriendRepository(SQLAlchemyRepository):
         )
 
     def get_pending_sent(self, user_id):
-        """Demandes en attente envoyées par user_id (il est l'expéditeur)."""
+        """Demandes en attente envoyées par user_id."""
         return (
             Friend.query
             .options(joinedload(Friend.user1), joinedload(Friend.user2))
