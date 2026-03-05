@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
 
@@ -183,6 +183,7 @@ def update_event(event_id):
         description: Event not found
     """
     current_user_id = get_jwt_identity()
+    role = get_jwt().get('role', 'user')
     data = request.get_json()
 
     if not data:
@@ -192,7 +193,7 @@ def update_event(event_id):
     if not event:
         return jsonify({"error": "Événement introuvable"}), 404
 
-    if event['creator_id'] != current_user_id:
+    if event['creator_id'] != current_user_id and role != 'admin':
         return jsonify({"error": "Vous n'êtes pas le créateur de cet événement"}), 403
 
     if event['status'] in ['cancelled', 'completed']:
@@ -232,12 +233,13 @@ def cancel_event(event_id):
         description: Event not found
     """
     current_user_id = get_jwt_identity()
+    role = get_jwt().get('role', 'user')
 
     event = facade.get_event_details(event_id)
     if not event:
         return jsonify({"error": "Événement introuvable"}), 404
 
-    if event['creator_id'] != current_user_id:
+    if event['creator_id'] != current_user_id and role != 'admin':
         return jsonify({"error": "Vous n'êtes pas le créateur de cet événement"}), 403
 
     if event['status'] == 'cancelled':
@@ -408,3 +410,145 @@ def add_event_comment(event_id):
         return jsonify({"error": error}), 400
 
     return jsonify({"success": True, "data": comment}), 201
+
+
+# -----------------------------------------------
+# DELETE /events/<event_id>/participants/<user_id> → expulser un participant
+# -----------------------------------------------
+@api_v1.route('/events/<int:event_id>/participants/<int:user_id>', methods=['DELETE'])
+@jwt_required()
+def kick_participant(event_id, user_id):
+    """
+    Kick a participant from an event
+    ---
+    tags:
+      - Events
+    security:
+      - Bearer: []
+    parameters:
+      - name: event_id
+        in: path
+        type: integer
+        required: true
+      - name: user_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the participant to remove
+    responses:
+      200:
+        description: Participant removed
+      403:
+        description: Forbidden — not creator or admin
+      404:
+        description: Event or participant not found
+    """
+    current_user_id = get_jwt_identity()
+    role = get_jwt().get('role', 'user')
+
+    event = facade.get_event_details(event_id)
+    if not event:
+        return jsonify({"error": "Événement introuvable"}), 404
+
+    if event['creator_id'] != current_user_id and role != 'admin':
+        return jsonify({"error": "Réservé au créateur ou à un administrateur"}), 403
+
+    if user_id == event['creator_id']:
+        return jsonify({"error": "Impossible d'expulser le créateur de l'événement"}), 400
+
+    result, error = facade.kick_participant(event_id, user_id)
+    if error:
+        status = 404 if "introuvable" in error else 400
+        return jsonify({"error": error}), status
+
+    return jsonify({"success": True, "message": "Participant retiré de l'événement"}), 200
+
+
+# -----------------------------------------------
+# POST /events/<event_id>/close → marquer l'événement comme terminé
+# -----------------------------------------------
+@api_v1.route('/events/<int:event_id>/close', methods=['POST'])
+@jwt_required()
+def close_event(event_id):
+    """
+    Close an event (mark as completed)
+    ---
+    tags:
+      - Events
+    security:
+      - Bearer: []
+    parameters:
+      - name: event_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Event closed
+      400:
+        description: Already completed or cancelled
+      403:
+        description: Forbidden — not creator or admin
+      404:
+        description: Event not found
+    """
+    current_user_id = get_jwt_identity()
+    role = get_jwt().get('role', 'user')
+
+    event = facade.get_event_details(event_id)
+    if not event:
+        return jsonify({"error": "Événement introuvable"}), 404
+
+    if event['creator_id'] != current_user_id and role != 'admin':
+        return jsonify({"error": "Réservé au créateur ou à un administrateur"}), 403
+
+    result, error = facade.close_event(event_id)
+    if error:
+        return jsonify({"error": error}), 400
+
+    return jsonify({"success": True, "data": result}), 200
+
+
+# -----------------------------------------------
+# POST /events/<event_id>/open → rouvrir un événement
+# -----------------------------------------------
+@api_v1.route('/events/<int:event_id>/open', methods=['POST'])
+@jwt_required()
+def open_event(event_id):
+    """
+    Reopen a closed or full event
+    ---
+    tags:
+      - Events
+    security:
+      - Bearer: []
+    parameters:
+      - name: event_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Event reopened
+      400:
+        description: Cannot reopen (already open or cancelled)
+      403:
+        description: Forbidden — not creator or admin
+      404:
+        description: Event not found
+    """
+    current_user_id = get_jwt_identity()
+    role = get_jwt().get('role', 'user')
+
+    event = facade.get_event_details(event_id)
+    if not event:
+        return jsonify({"error": "Événement introuvable"}), 404
+
+    if event['creator_id'] != current_user_id and role != 'admin':
+        return jsonify({"error": "Réservé au créateur ou à un administrateur"}), 403
+
+    result, error = facade.open_event(event_id)
+    if error:
+        return jsonify({"error": error}), 400
+
+    return jsonify({"success": True, "data": result}), 200

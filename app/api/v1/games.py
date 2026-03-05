@@ -134,14 +134,13 @@ def get_game_events(game_id):
 
 
 # -----------------------------------------------
-# POST /games → ajouter un jeu via Board Game Atlas (admin seulement)
-# Body: { id_api }  — toutes les autres infos sont récupérées depuis l'API externe
+# POST /games → ajouter un jeu manuellement (admin seulement)
 # -----------------------------------------------
 @api_v1.route('/games', methods=['POST'])
 @jwt_required()
 def create_game():
     """
-    Create a new game from BoardGameGeek (Admin only)
+    Create a new game (Admin only)
     ---
     tags:
       - Games
@@ -156,15 +155,13 @@ def create_game():
         schema:
           type: object
           required:
-            - id_api
+            - name
+            - min_players
+            - max_players
+            - play_time_minutes
           properties:
-            id_api:
-              type: integer
-              description: "Identifiant BoardGameGeek (ex: 13 pour Catan, 68448 pour 7 Wonders)"
-              example: 13
             name:
               type: string
-              description: "Fallback manuel si BGG est inaccessible"
               example: "Catan"
             description:
               type: string
@@ -183,9 +180,9 @@ def create_game():
               example: ""
     responses:
       201:
-        description: "Game created (BGG auto ou données manuelles si name/min_players/max_players/play_time_minutes fournis)"
+        description: Game created
       400:
-        description: id_api manquant, introuvable sur BGG, ou jeu déjà en base
+        description: Champ requis manquant ou jeu déjà en base
       403:
         description: Admin only
     """
@@ -194,8 +191,8 @@ def create_game():
         return jsonify({"error": "Action réservée aux administrateurs"}), 403
 
     data = request.get_json()
-    if not data or not data.get('id_api'):
-        return jsonify({"error": "Le champ 'id_api' est requis"}), 400
+    if not data:
+        return jsonify({"error": "Pas de données envoyées"}), 400
 
     new_game, error = facade.create_game(data)
     if error:

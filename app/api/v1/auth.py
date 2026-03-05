@@ -39,7 +39,10 @@ parameters:
           example: nina@test.com
         password:
           type: string
-          example: motdepasse123
+          description: >
+            Minimum 8 caractères, doit contenir :
+            une majuscule, une minuscule, un chiffre et un caractère spécial (!@#$%^&*…)
+          example: MonMot@passe1
         city:
           type: string
           example: Paris
