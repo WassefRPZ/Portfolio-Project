@@ -1,9 +1,7 @@
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
-
-facade = BoardGameFacade()
+from app.services import facade
 
 
 # -----------------------------------------------
@@ -34,7 +32,7 @@ def get_feed():
       200:
         description: List of posts
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     try:
         limit  = min(int(request.args.get('limit',  20)), 50)
         offset = max(int(request.args.get('offset',  0)),  0)
@@ -85,7 +83,7 @@ def create_post():
       400:
         description: Ni texte ni image, ou type invalide
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     json_data  = request.get_json(silent=True) or {}
     content    = request.form.get('content')   or json_data.get('content')
     post_type  = request.form.get('post_type') or json_data.get('post_type', 'text')
@@ -129,7 +127,7 @@ def delete_post(post_id):
       404:
         description: Post not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     result, error = facade.delete_post(post_id, current_user_id)
     if error:
         status = 404 if "introuvable" in error else 403
@@ -164,7 +162,7 @@ def like_post(post_id):
       404:
         description: Post introuvable
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     result, error = facade.like_post(current_user_id, post_id)
     if error:
         status = 404 if "introuvable" in error else 400
@@ -199,7 +197,7 @@ def unlike_post(post_id):
       404:
         description: Post introuvable
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     result, error = facade.unlike_post(current_user_id, post_id)
     if error:
         status = 404 if "introuvable" in error else 400
@@ -278,8 +276,8 @@ def add_post_comment(post_id):
       404:
         description: Post introuvable
     """
-    current_user_id = get_jwt_identity()
-    data = request.get_json()
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True)
     if not data or not data.get('content'):
         return jsonify({"error": "Le champ 'content' est requis"}), 400
 
@@ -317,7 +315,7 @@ def delete_post_comment(comment_id):
       404:
         description: Comment not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     result, error = facade.delete_post_comment(comment_id, current_user_id)
     if error:
         status = 404 if "introuvable" in error else 403

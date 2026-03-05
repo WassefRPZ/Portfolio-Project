@@ -233,13 +233,15 @@ class EventCommentRepository(SQLAlchemyRepository):
     def __init__(self):
         super().__init__(EventComment)
 
-    def get_by_event(self, event_id):
+    def get_by_event(self, event_id, limit=50, offset=0):
         """Charge les commentaires avec leurs auteurs et profils en une seule requête."""
         return (
             EventComment.query
             .options(joinedload(EventComment.author).joinedload(User.profile))
             .filter_by(event_id=event_id)
             .order_by(EventComment.created_at)
+            .offset(offset)
+            .limit(limit)
             .all()
         )
 

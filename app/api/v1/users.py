@@ -1,9 +1,7 @@
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
-
-facade = BoardGameFacade()
+from app.services import facade
 
 
 # -----------------------------------------------
@@ -25,7 +23,7 @@ responses:
   401:
     description: Unauthorized
 """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     user = facade.get_user(current_user_id)
     if not user:
@@ -75,7 +73,7 @@ responses:
     description: Invalid data or upload error
 """
 
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     # Support multipart/form-data (avec fichier) ou application/json (sans fichier)
     if request.content_type and 'multipart/form-data' in request.content_type:
@@ -183,10 +181,16 @@ responses:
     description: User events
 """
 
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
-    events = facade.get_user_events(current_user_id)
-    return jsonify({"success": True, "data": events}), 200
+    try:
+        limit  = min(int(request.args.get('limit',  50)), 100)
+        offset = max(int(request.args.get('offset',  0)),   0)
+    except (ValueError, TypeError):
+        limit, offset = 50, 0
+
+    events = facade.get_user_events(current_user_id, limit=limit, offset=offset)
+    return jsonify({"success": True, "data": events, "limit": limit, "offset": offset}), 200
 
 
 # -----------------------------------------------
@@ -206,7 +210,7 @@ responses:
   200:
     description: Favorite games
 """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     favorites = facade.get_favorite_games(current_user_id)
     return jsonify({"success": True, "data": favorites}), 200
@@ -243,8 +247,8 @@ responses:
   201:
     description: Favorite added
 """
-    current_user_id = get_jwt_identity()
-    data = request.get_json()
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True)
 
     if not data or 'game_id' not in data:
         return jsonify({"error": "game_id requis"}), 400
@@ -278,7 +282,7 @@ def remove_favorite_game(game_id):
       200:
         description: Game removed
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     result, error = facade.remove_favorite_game(current_user_id, game_id)
     if error:

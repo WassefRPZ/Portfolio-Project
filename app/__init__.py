@@ -3,11 +3,14 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flasgger import Swagger
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import cloudinary
 from config import Config
 
-db  = SQLAlchemy()
-jwt = JWTManager()
+db      = SQLAlchemy()
+jwt     = JWTManager()
+limiter = Limiter(key_func=get_remote_address)
 
 
 def create_app():
@@ -25,6 +28,7 @@ def create_app():
     # Extensions
     db.init_app(app)
     jwt.init_app(app)
+    limiter.init_app(app)
     origins = app.config.get("CORS_ORIGINS", "*")
     CORS(app, origins=origins.split(",") if origins != "*" else "*")
 

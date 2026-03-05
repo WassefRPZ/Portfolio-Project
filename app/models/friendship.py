@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -18,7 +18,7 @@ class Friend(db.Model):
     user_id_2    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     requester_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status       = db.Column(db.Enum('pending', 'accepted'), default='pending')
-    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at   = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         db.UniqueConstraint('user_id_1', 'user_id_2', name='uq_friendship'),

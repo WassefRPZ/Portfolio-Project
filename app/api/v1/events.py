@@ -1,9 +1,7 @@
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
-
-facade = BoardGameFacade()
+from app.services import facade
 
 
 # -----------------------------------------------
@@ -93,7 +91,7 @@ responses:
   401:
     description: Unauthorized
 """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     # Support multipart/form-data (avec fichier) ou application/json (sans fichier)
     if request.content_type and 'multipart/form-data' in request.content_type:
@@ -107,7 +105,7 @@ responses:
                 except ValueError:
                     return jsonify({"error": f"'{int_field}' doit être un entier"}), 400
     else:
-        data = request.get_json()
+        data = request.get_json(silent=True)
         image_file = None
 
     if not data:
@@ -182,9 +180,9 @@ def update_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     role = get_jwt().get('role', 'user')
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
@@ -232,7 +230,7 @@ def cancel_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     role = get_jwt().get('role', 'user')
 
     event = facade.get_event_details(event_id)
@@ -279,7 +277,7 @@ def join_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     event = facade.get_event_details(event_id)
     if not event:
@@ -324,7 +322,7 @@ def leave_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     event = facade.get_event_details(event_id)
     if not event:
@@ -365,8 +363,14 @@ def get_event_comments(event_id):
     if not event:
         return jsonify({"error": "Événement introuvable"}), 404
 
-    comments = facade.get_event_comments(event_id)
-    return jsonify({"success": True, "data": comments}), 200
+    try:
+        limit  = min(int(request.args.get('limit',  50)), 100)
+        offset = max(int(request.args.get('offset',  0)),   0)
+    except (ValueError, TypeError):
+        limit, offset = 50, 0
+
+    comments = facade.get_event_comments(event_id, limit=limit, offset=offset)
+    return jsonify({"success": True, "data": comments, "limit": limit, "offset": offset}), 200
 
 
 # -----------------------------------------------
@@ -395,8 +399,8 @@ def add_event_comment(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
-    data = request.get_json()
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True)
 
     if not data or not data.get('content'):
         return jsonify({"error": "Le contenu du commentaire est requis"}), 400
@@ -443,7 +447,7 @@ def kick_participant(event_id, user_id):
       404:
         description: Event or participant not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     role = get_jwt().get('role', 'user')
 
     event = facade.get_event_details(event_id)
@@ -492,7 +496,7 @@ def close_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     role = get_jwt().get('role', 'user')
 
     event = facade.get_event_details(event_id)
@@ -537,7 +541,7 @@ def open_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     role = get_jwt().get('role', 'user')
 
     event = facade.get_event_details(event_id)

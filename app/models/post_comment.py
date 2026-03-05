@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -11,7 +11,7 @@ class PostComment(db.Model):
     post_id    = db.Column(db.Integer, db.ForeignKey('posts.id'),  nullable=False)
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'),  nullable=False)
     content    = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     author = db.relationship('User', foreign_keys=[user_id],
                              backref='post_comments_written', lazy='select')

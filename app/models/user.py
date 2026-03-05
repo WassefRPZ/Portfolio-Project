@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -13,7 +13,7 @@ class User(db.Model):
     email         = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role          = db.Column(db.Enum('user', 'admin'), nullable=False, default='user')
-    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at    = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     profile = db.relationship('Profile', backref='user', uselist=False,
                               lazy='select', cascade='all, delete-orphan')

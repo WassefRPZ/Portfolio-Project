@@ -1,9 +1,7 @@
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
-
-facade = BoardGameFacade()
+from app.services import facade
 
 
 # -----------------------------------------------
@@ -53,8 +51,8 @@ def create_review():
       400:
         description: Invalid input
     """
-    current_user_id = get_jwt_identity()
-    data = request.get_json()
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
@@ -148,7 +146,7 @@ def delete_review(review_id):
       404:
         description: Review not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     result, error = facade.delete_review(review_id, current_user_id)
     if error:
         status = 404 if "introuvable" in error else 403
