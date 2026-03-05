@@ -8,12 +8,15 @@ from app.services import facade
 # GET /events → liste des événements
 # -----------------------------------------------
 @api_v1.route('/events', methods=['GET'])
+@jwt_required()
 def list_events():
     """
 List events
 ---
 tags:
   - Events
+security:
+  - Bearer: []
 parameters:
   - in: query
     name: city
@@ -22,6 +25,12 @@ parameters:
     name: date
     type: string
     description: "Date ISO 8601 (ex: 2024-12-25)"
+  - in: query
+    name: limit
+    type: integer
+  - in: query
+    name: offset
+    type: integer
 responses:
   200:
     description: List of events
@@ -31,10 +40,16 @@ responses:
     city = request.args.get('city')
     date = request.args.get('date')
 
-    events, error = facade.get_events(city=city, date=date)
+    try:
+        limit = min(int(request.args.get('limit', 50)), 100)
+        offset = max(int(request.args.get('offset', 0)), 0)
+    except (ValueError, TypeError):
+        limit, offset = 50, 0
+
+    events, total_count, error = facade.get_events(city=city, date=date, limit=limit, offset=offset)
     if error:
         return jsonify({"error": error}), 400
-    return jsonify({"success": True, "data": events}), 200
+    return jsonify({"data": events, "total_count": total_count}), 200
 
 
 # -----------------------------------------------
@@ -116,17 +131,26 @@ responses:
         if field not in data:
             return jsonify({"error": f"Champ '{field}' manquant"}), 400
 
+    # Accepter les alias envoyés par le front-end
+    if 'game' in data and 'game_id' not in data:
+        data['game_id'] = data['game']
+    if 'date' in data and 'date_time' not in data:
+        data['date_time'] = data['date']
+    if 'location' in data and 'location_text' not in data:
+        data['location_text'] = data['location']
+
     new_event, error = facade.create_event(data, current_user_id, image_file)
     if error:
         return jsonify({"error": error}), 400
 
-    return jsonify({"success": True, "data": new_event}), 201
+    return jsonify({"event_id": new_event['id'], "event_public": new_event}), 201
 
 
 # -----------------------------------------------
 # GET /events/<event_id> → détails d'un événement
 # -----------------------------------------------
 @api_v1.route('/events/<int:event_id>', methods=['GET'])
+@jwt_required()
 def get_event(event_id):
     """
     Get event details
@@ -341,7 +365,8 @@ def leave_event(event_id):
 # -----------------------------------------------
 # GET /events/<event_id>/comments → voir les commentaires
 # -----------------------------------------------
-@api_v1.route('/events/<int:event_id>/comments', methods=['GET'])
+@api_v1.route('/events/<int:event_id>/comment', methods=['GET'])
+@jwt_required()
 def get_event_comments(event_id):
     """
     Get event comments
@@ -376,7 +401,7 @@ def get_event_comments(event_id):
 # -----------------------------------------------
 # POST /events/<event_id>/comments → ajouter un commentaire
 # -----------------------------------------------
-@api_v1.route('/events/<int:event_id>/comments', methods=['POST'])
+@api_v1.route('/events/<int:event_id>/comment', methods=['POST'])
 @jwt_required()
 def add_event_comment(event_id):
     """

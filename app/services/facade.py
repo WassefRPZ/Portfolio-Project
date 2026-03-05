@@ -248,10 +248,10 @@ class BoardGameFacade:
     # ÉVÉNEMENTS
     # ==========================================
 
-    def get_events(self, city=None, date=None):
-        events, error = self.events.get_open_events(city=city, date=date)
+    def get_events(self, city=None, date=None, limit=50, offset=0):
+        events, total_count, error = self.events.get_open_events(city=city, date=date, limit=limit, offset=offset)
         if error:
-            return [], error
+            return [], 0, error
 
         result = []
         for event in events:
@@ -259,7 +259,7 @@ class BoardGameFacade:
             if event.game_obj:
                 event_data['game'] = event.game_obj.to_dict()
             result.append(event_data)
-        return result, None
+        return result, total_count, None
 
     def get_event(self, event_id):
         event = self.events.get_by_id(event_id)

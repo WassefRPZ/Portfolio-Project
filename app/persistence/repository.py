@@ -135,8 +135,8 @@ class EventRepository(SQLAlchemyRepository):
             .first()
         )
 
-    def get_open_events(self, city=None, date=None):
-        """Retourne les événements ouverts, avec filtres optionnels."""
+    def get_open_events(self, city=None, date=None, limit=50, offset=0):
+        """Retourne les événements ouverts, avec filtres optionnels et pagination."""
         q = (
             Event.query
             .options(
@@ -154,9 +154,11 @@ class EventRepository(SQLAlchemyRepository):
                 target = datetime.fromisoformat(date)
                 q = q.filter(db.func.date(Event.date_time) == target.date())
             except (ValueError, TypeError):
-                return None, "Format de date invalide. Utiliser ISO 8601 (ex: 2024-12-25)"
+                return None, 0, "Format de date invalide. Utiliser ISO 8601 (ex: 2024-12-25)"
 
-        return q.order_by(Event.date_time).limit(50).all(), None
+        total_count = q.with_entities(func.count(Event.id)).scalar()
+        events = q.order_by(Event.date_time).offset(offset).limit(limit).all()
+        return events, total_count, None
 
     def get_by_creator(self, creator_id):
         return Event.query.filter_by(creator_id=creator_id).all()

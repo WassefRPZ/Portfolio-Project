@@ -72,6 +72,7 @@ def _wipe(app):
     """Vide toutes les tables de la base de test."""
     with app.app_context():
         _db.session.remove()
+        _db.session.execute(_db.text('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED'))
         _db.session.execute(_db.text('SET FOREIGN_KEY_CHECKS = 0'))
         for table in [
             'reviews', 'post_comments', 'post_likes', 'posts',
@@ -128,14 +129,14 @@ def auth(token):
 def make_game(app, name='Catan', min_p=2, max_p=4, time=60):
     """Crée un jeu directement en base et retourne son id."""
     with app.app_context():
-        game = Game(
-            name=name, description='Test game',
-            min_players=min_p, max_players=max_p,
-            play_time_minutes=time,
-        )
-        _db.session.add(game)
-        _db.session.commit()
-        return game.id
+        with _db.engine.connect() as conn:
+            result = conn.execute(_db.text(
+                "INSERT INTO games (name, description, min_players, max_players, play_time_min) "
+                "VALUES (:n, :d, :min_p, :max_p, :t)"
+            ), {'n': name, 'd': 'Test game', 'min_p': min_p, 'max_p': max_p, 't': time})
+            conn.commit()
+            gid = result.lastrowid
+    return gid
 
 
 # ── Fixtures utilisateurs ─────────────────────────────────────────────────────
@@ -164,4 +165,4 @@ def event_id(client, app, user_a, mock_ext):
         'date_time': '2030-06-15T19:00:00',
         'max_players': 4,
     }, headers=auth(user_a['token']))
-    return resp.get_json()['data']['id']
+    return resp.get_json()['event_public']['id']
