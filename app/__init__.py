@@ -81,7 +81,10 @@ def create_app():
                 "users":   "/api/v1/users",
                 "events":  "/api/v1/events",
                 "friends": "/api/v1/friends",
-                "games":   "/api/v1/games"
+                "games":   "/api/v1/games",
+                "posts":   "/api/v1/posts",
+                "reviews": "/api/v1/reviews",
+                "search":  "/api/v1/search",
             }
         }
 

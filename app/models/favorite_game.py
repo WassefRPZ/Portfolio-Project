@@ -19,11 +19,3 @@ class FavoriteGame(db.Model):
                            backref='favorite_game_entries', lazy='select')
     game = db.relationship('Game', foreign_keys=[game_id],
                            backref='favorited_by',          lazy='select')
-
-    def to_dict(self):
-        """Sérialise le favori en dictionnaire JSON-compatible."""
-        return {
-            "user_id":  self.user_id,
-            "game_id":  self.game_id,
-            "added_at": self.added_at.isoformat() if self.added_at else None,
-        }

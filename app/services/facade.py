@@ -222,7 +222,7 @@ class BoardGameFacade:
         return user.to_dict(), None
 
     def search_users(self, query, city=None):
-        return [u.to_dict() for u in self.users.search(query, city)]
+        return [u.to_public_dict() for u in self.users.search(query, city)]
 
     def global_search(self, query):
         """Recherche simultanée dans les utilisateurs (username) et les événements ouverts (title/description)."""
@@ -432,7 +432,7 @@ class BoardGameFacade:
         for f in friendships:
             friend = f.user2 if f.user_id_1 == user_id else f.user1
             if friend:
-                result.append(friend.to_dict())
+                result.append(friend.to_public_dict())
         return result
 
     def get_pending_requests(self, user_id):
@@ -443,7 +443,7 @@ class BoardGameFacade:
             if requester:
                 result.append({
                     "friendship": f.to_dict(),
-                    "requester":  requester.to_dict(),
+                    "requester":  requester.to_public_dict(),
                 })
         return result
 
@@ -664,7 +664,7 @@ class BoardGameFacade:
         return event.to_dict(), None
 
     def delete_post(self, post_id, user_id):
-        post = Post.query.filter_by(id=post_id).first()
+        post = self.posts.get_by_id(post_id)
         if not post:
             return None, "Publication introuvable"
 

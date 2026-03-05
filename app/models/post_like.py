@@ -8,9 +8,3 @@ class PostLike(db.Model):
 
     user_id  = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     post_id  = db.Column(db.Integer, db.ForeignKey('posts.id'), primary_key=True)
-
-    def to_dict(self):
-        return {
-            "user_id": self.user_id,
-            "post_id": self.post_id,
-        }

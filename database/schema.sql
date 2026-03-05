@@ -210,6 +210,12 @@ CREATE TABLE reviews (
     -- Validation de la plage de la note (MySQL 8.0.16+)
     CONSTRAINT chk_rating CHECK (rating BETWEEN 1 AND 5),
 
+    -- Un utilisateur ne peut noter qu'une seule fois le même événement
+    UNIQUE KEY uq_review_event (reviewer_id, event_id),
+
+    -- Un utilisateur ne peut noter qu'une seule fois le même joueur
+    UNIQUE KEY uq_review_user  (reviewer_id, reviewed_user_id),
+
     -- Clé étrangère : suppression de l'auteur → suppression de ses avis
     CONSTRAINT fk_reviews_reviewer
         FOREIGN KEY (reviewer_id) REFERENCES users(id)
