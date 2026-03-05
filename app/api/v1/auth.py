@@ -39,10 +39,19 @@ parameters:
           example: nina@test.com
         password:
           type: string
-          example: 1234
+          description: >
+            Minimum 8 caractères, doit contenir :
+            une majuscule, une minuscule, un chiffre et un caractère spécial (!@#$%^&*…)
+          example: MonMot@passe1
         city:
           type: string
           example: Paris
+        region:
+          type: string
+          example: Île-de-France
+        bio:
+          type: string
+          example: Passionnée de jeux de société
 responses:
   201:
     description: User registered
@@ -58,22 +67,20 @@ responses:
     if error:
         return jsonify({"error": error}), 400
 
-
     access_token = create_access_token(
-        identity=str(user['user_id']),
+        identity=user['id'],  # INT — utilisé comme identité JWT
         additional_claims={
-            'username': user['username'],
-            'email': user['email'],
-            # On vérifie si le rôle est 'admin'
-            'is_admin': (user.get('role') == 'admin') 
+            'username': user.get('username'),
+            'email':    user['email'],
+            'role':     user.get('role', 'user'),
         }
     )
 
     return jsonify({
         "success": True,
         "data": {
-            "user": user,
-            "access_token": access_token
+            "user":         user,
+            "access_token": access_token,
         }
     }), 201
 
@@ -116,32 +123,30 @@ def login():
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 
-    email = data.get('email')
+    email    = data.get('email')
     password = data.get('password')
 
     if not email or not password:
         return jsonify({"error": "Email et mot de passe requis"}), 400
 
-    user = facade.login_user(email, password)
+    user, error = facade.login_user(email, password)
 
-    if not user:
-        return jsonify({"error": "Email ou mot de passe incorrect"}), 401
-
+    if error:
+        return jsonify({"error": error}), 401
 
     access_token = create_access_token(
-        identity=str(user['user_id']),
+        identity=user['id'],  # INT — utilisé comme identité JWT
         additional_claims={
-            'username': user['username'],
-            'email': user['email'],
-            # On vérifie si le rôle est 'admin'
-            'is_admin': (user.get('role') == 'admin') 
+            'username': user.get('username'),
+            'email':    user['email'],
+            'role':     user.get('role', 'user'),
         }
     )
 
     return jsonify({
         "success": True,
         "data": {
-            "user": user,
-            "access_token": access_token
+            "user":         user,
+            "access_token": access_token,
         }
     }), 200

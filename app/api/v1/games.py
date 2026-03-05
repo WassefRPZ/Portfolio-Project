@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt
 from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
 
@@ -8,7 +8,7 @@ facade = BoardGameFacade()
 
 # -----------------------------------------------
 # GET /games → liste tous les jeux en base
-# Table games : game_id, name, description, min_players, max_players, play_time, image_url
+# Table games : game_id, name, description, min_players, max_players, play_time_minutes, image_url
 # -----------------------------------------------
 @api_v1.route('/games', methods=['GET'])
 def get_all_games():
@@ -29,15 +29,12 @@ responses:
 # GET /games/search?q=catan → rechercher un jeu par nom
 # -----------------------------------------------
 @api_v1.route('/games/search', methods=['GET'])
-@jwt_required()
 def search_games():
     """
     Search games by name
     ---
     tags:
       - Games
-    security:
-      - Bearer: []
     parameters:
       - name: q
         in: query
@@ -79,7 +76,7 @@ responses:
 # -----------------------------------------------
 # GET /games/<game_id> → détails d'un jeu
 # -----------------------------------------------
-@api_v1.route('/games/<game_id>', methods=['GET'])
+@api_v1.route('/games/<int:game_id>', methods=['GET'])
 def get_game(game_id):
     """
     Get game details
@@ -89,7 +86,7 @@ def get_game(game_id):
     parameters:
       - name: game_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -107,7 +104,7 @@ def get_game(game_id):
 # -----------------------------------------------
 # GET /games/<game_id>/events → événements utilisant ce jeu
 # -----------------------------------------------
-@api_v1.route('/games/<game_id>/events', methods=['GET'])
+@api_v1.route('/games/<int:game_id>/events', methods=['GET'])
 def get_game_events(game_id):
     """
     Get events for a game
@@ -117,7 +114,7 @@ def get_game_events(game_id):
     parameters:
       - name: game_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -134,8 +131,7 @@ def get_game_events(game_id):
 
 
 # -----------------------------------------------
-# POST /games → ajouter un jeu (admin seulement)
-# Body: { name, description?, min_players, max_players, play_time, image_url? }
+# POST /games → ajouter un jeu manuellement (admin seulement)
 # -----------------------------------------------
 @api_v1.route('/games', methods=['POST'])
 @jwt_required()
@@ -159,69 +155,53 @@ def create_game():
             - name
             - min_players
             - max_players
-            - play_time
+            - play_time_minutes
           properties:
             name:
               type: string
               example: "Catan"
             description:
               type: string
-              example: "Jeu de stratégie"
+              example: "Le jeu de plateau classique"
             min_players:
               type: integer
               example: 3
             max_players:
               type: integer
               example: 4
-            play_time:
+            play_time_minutes:
               type: integer
               example: 90
             image_url:
               type: string
-              example: "http://image.com/catan.jpg"
+              example: ""
     responses:
       201:
         description: Game created
       400:
-        description: Invalid input
+        description: Champ requis manquant ou jeu déjà en base
       403:
         description: Admin only
     """
     claims = get_jwt()
-    if not claims.get('is_admin', False):
+    if claims.get('role') != 'admin':
         return jsonify({"error": "Action réservée aux administrateurs"}), 403
 
     data = request.get_json()
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 
+    new_game, error = facade.create_game(data)
+    if error:
+        return jsonify({"error": error}), 400
 
-    required = ['name', 'min_players', 'max_players', 'play_time']
-    for field in required:
-        if field not in data:
-            return jsonify({"error": f"Champ '{field}' manquant"}), 400
-
-
-    if data['min_players'] > data['max_players']:
-        return jsonify({"error": "min_players ne peut pas dépasser max_players"}), 400
-
-    try:
-        existing = facade.get_game_by_name(data['name'])
-        if existing:
-            return jsonify({"error": "Ce jeu existe déjà"}), 400
-
-
-        new_game = facade.create_game(data)
-        return jsonify({"success": True, "data": new_game}), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    return jsonify({"success": True, "data": new_game}), 201
 
 
 # -----------------------------------------------
 # PUT /games/<game_id> → modifier un jeu (admin seulement)
-# Body: champs à modifier
 # -----------------------------------------------
-@api_v1.route('/games/<game_id>', methods=['PUT'])
+@api_v1.route('/games/<int:game_id>', methods=['PUT'])
 @jwt_required()
 def update_game(game_id):
     """
@@ -234,7 +214,7 @@ def update_game(game_id):
     parameters:
       - name: game_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -243,22 +223,16 @@ def update_game(game_id):
         description: Admin only
     """
     claims = get_jwt()
-    if not claims.get('is_admin', False):
+    if claims.get('role') != 'admin':
         return jsonify({"error": "Action réservée aux administrateurs"}), 403
-
-    game = facade.get_game(game_id)
-    if not game:
-        return jsonify({"error": "Jeu introuvable"}), 404
 
     data = request.get_json()
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 
-    # Vérifier cohérence joueurs si les deux sont fournis
-    min_p = data.get('min_players', game['min_players'])
-    max_p = data.get('max_players', game['max_players'])
-    if min_p > max_p:
-        return jsonify({"error": "min_players ne peut pas dépasser max_players"}), 400
+    updated_game, error = facade.update_game(game_id, data)
+    if error:
+        status = 404 if "introuvable" in error else 400
+        return jsonify({"error": error}), status
 
-    updated_game = facade.update_game(game_id, data)
     return jsonify({"success": True, "data": updated_game}), 200

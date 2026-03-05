@@ -55,7 +55,7 @@ responses:
 # -----------------------------------------------
 # POST /friends/request/<receiver_id> → envoyer une demande
 # -----------------------------------------------
-@api_v1.route('/friends/request/<receiver_id>', methods=['POST'])
+@api_v1.route('/friends/request/<int:receiver_id>', methods=['POST'])
 @jwt_required()
 def send_friend_request(receiver_id):
     """
@@ -68,7 +68,7 @@ def send_friend_request(receiver_id):
     parameters:
       - name: receiver_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       201:
@@ -77,9 +77,6 @@ def send_friend_request(receiver_id):
         description: Bad request
     """
     current_user_id = get_jwt_identity()
-
-    if current_user_id == receiver_id:
-        return jsonify({"error": "Vous ne pouvez pas vous ajouter vous-même"}), 400
 
     result, error = facade.add_friend(current_user_id, receiver_id)
     if error:
@@ -91,7 +88,7 @@ def send_friend_request(receiver_id):
 # -----------------------------------------------
 # POST /friends/accept/<requester_id> → accepter une demande
 # -----------------------------------------------
-@api_v1.route('/friends/accept/<requester_id>', methods=['POST'])
+@api_v1.route('/friends/accept/<int:requester_id>', methods=['POST'])
 @jwt_required()
 def accept_friend_request(requester_id):
     """
@@ -104,7 +101,7 @@ def accept_friend_request(requester_id):
     parameters:
       - name: requester_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -122,7 +119,7 @@ def accept_friend_request(requester_id):
 # -----------------------------------------------
 # POST /friends/decline/<requester_id> → refuser une demande
 # -----------------------------------------------
-@api_v1.route('/friends/decline/<requester_id>', methods=['POST'])
+@api_v1.route('/friends/decline/<int:requester_id>', methods=['POST'])
 @jwt_required()
 def decline_friend_request(requester_id):
     """
@@ -135,7 +132,7 @@ def decline_friend_request(requester_id):
     parameters:
       - name: requester_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -153,7 +150,7 @@ def decline_friend_request(requester_id):
 # -----------------------------------------------
 # DELETE /friends/<friend_id> → supprimer un ami
 # -----------------------------------------------
-@api_v1.route('/friends/<friend_id>', methods=['DELETE'])
+@api_v1.route('/friends/<int:friend_id>', methods=['DELETE'])
 @jwt_required()
 def remove_friend(friend_id):
     """
@@ -166,7 +163,7 @@ def remove_friend(friend_id):
     parameters:
       - name: friend_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
@@ -179,3 +176,26 @@ def remove_friend(friend_id):
         return jsonify({"error": error}), 400
 
     return jsonify({"success": True, "message": "Ami supprimé"}), 200
+
+
+# -----------------------------------------------
+# GET /friends/sent → voir ses demandes envoyées en attente
+# -----------------------------------------------
+@api_v1.route('/friends/sent', methods=['GET'])
+@jwt_required()
+def get_sent_requests():
+    """
+    Get pending friend requests sent by the current user
+    ---
+    tags:
+      - Friends
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Pending sent requests
+    """
+    current_user_id = get_jwt_identity()
+
+    sent = facade.get_sent_requests(current_user_id)
+    return jsonify({"success": True, "data": sent}), 200

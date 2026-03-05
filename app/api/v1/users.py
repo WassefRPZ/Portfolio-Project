@@ -8,7 +8,6 @@ facade = BoardGameFacade()
 
 # -----------------------------------------------
 # GET /users/me → voir son propre profil
-# Retourne : user + ses jeux favoris (géré dans facade.get_user)
 # -----------------------------------------------
 @api_v1.route('/users/me', methods=['GET'])
 @jwt_required()
@@ -30,7 +29,7 @@ responses:
 
     user = facade.get_user(current_user_id)
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Utilisateur introuvable"}), 404
 
     return jsonify({"success": True, "data": user}), 200
 
@@ -50,38 +49,49 @@ tags:
 security:
   - Bearer: []
 consumes:
+  - multipart/form-data
   - application/json
 parameters:
-  - in: body
-    name: body
-    required: true
-    schema:
-      type: object
-      properties:
-        username:
-          type: string
-        city:
-          type: string
-        region:
-          type: string
-        bio:
-          type: string
-        profile_image_url:
-          type: string
+  - in: formData
+    name: image
+    type: file
+    description: "Image de profil (JPEG/PNG) — upload vers Cloudinary"
+  - in: formData
+    name: username
+    type: string
+  - in: formData
+    name: city
+    type: string
+  - in: formData
+    name: region
+    type: string
+  - in: formData
+    name: bio
+    type: string
 responses:
   200:
     description: Profile updated
+  400:
+    description: Invalid data or upload error
 """
 
     current_user_id = get_jwt_identity()
-    data = request.get_json()
 
-    if not data:
+    # Support multipart/form-data (avec fichier) ou application/json (sans fichier)
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form.to_dict()
+        image_file = request.files.get('image')
+    else:
+        data = request.get_json() or {}
+        image_file = None
+
+    if not data and not image_file:
         return jsonify({"error": "Aucune donnée envoyée"}), 400
 
-    updated_user = facade.update_user_profile(current_user_id, data)
-    if not updated_user:
-        return jsonify({"error": "User not found"}), 404
+    updated_user, error = facade.update_user_profile(current_user_id, data, image_file)
+    if error:
+        status = 404 if "introuvable" in error else 400
+        return jsonify({"error": error}), status
 
     return jsonify({"success": True, "data": updated_user}), 200
 
@@ -127,7 +137,7 @@ def search_users():
 # -----------------------------------------------
 # GET /users/<user_id> → voir le profil d'un autre joueur
 # -----------------------------------------------
-@api_v1.route('/users/<user_id>', methods=['GET'])
+@api_v1.route('/users/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_user_profile(user_id):
     """
@@ -140,17 +150,17 @@ def get_user_profile(user_id):
     parameters:
       - name: user_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
         description: User profile
       404:
-        description: User not found
+        description: Utilisateur introuvable
     """
-    user = facade.get_user(user_id)
+    user = facade.get_public_user(user_id)
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Utilisateur introuvable"}), 404
 
     return jsonify({"success": True, "data": user}), 200
 
@@ -228,7 +238,7 @@ parameters:
         - game_id
       properties:
         game_id:
-          type: string
+          type: integer
 responses:
   201:
     description: Favorite added
@@ -249,7 +259,7 @@ responses:
 # -----------------------------------------------
 # DELETE /users/me/favorite-games/<game_id> → retirer un jeu favori
 # -----------------------------------------------
-@api_v1.route('/users/me/favorite-games/<game_id>', methods=['DELETE'])
+@api_v1.route('/users/me/favorite-games/<int:game_id>', methods=['DELETE'])
 @jwt_required()
 def remove_favorite_game(game_id):
     """
@@ -262,7 +272,7 @@ def remove_favorite_game(game_id):
     parameters:
       - name: game_id
         in: path
-        type: string
+        type: integer
         required: true
     responses:
       200:
