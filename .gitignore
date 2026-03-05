@@ -17,3 +17,5 @@ dist/
 instance/
 .bin
 node_modules/
+test_manuel_complet.py
+test_api_externes.py

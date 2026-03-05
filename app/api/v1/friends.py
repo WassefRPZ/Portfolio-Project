@@ -1,9 +1,7 @@
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
-
-facade = BoardGameFacade()
+from app.services import facade
 
 
 # -----------------------------------------------
@@ -23,7 +21,7 @@ responses:
   200:
     description: List of friends
 """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     friends = facade.get_friends(current_user_id)
     return jsonify({"success": True, "data": friends}), 200
@@ -46,7 +44,7 @@ responses:
   200:
     description: Pending requests
 """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     requests_list = facade.get_pending_requests(current_user_id)
     return jsonify({"success": True, "data": requests_list}), 200
@@ -76,7 +74,7 @@ def send_friend_request(receiver_id):
       400:
         description: Bad request
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     result, error = facade.add_friend(current_user_id, receiver_id)
     if error:
@@ -107,7 +105,7 @@ def accept_friend_request(requester_id):
       200:
         description: Friend request accepted
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     result, error = facade.accept_friend(current_user_id, requester_id)
     if error:
@@ -138,7 +136,7 @@ def decline_friend_request(requester_id):
       200:
         description: Friend request declined
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     result, error = facade.decline_friend(current_user_id, requester_id)
     if error:
@@ -169,7 +167,7 @@ def remove_friend(friend_id):
       200:
         description: Friend removed
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     result, error = facade.remove_friend(current_user_id, friend_id)
     if error:
@@ -195,7 +193,7 @@ def get_sent_requests():
       200:
         description: Pending sent requests
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     sent = facade.get_sent_requests(current_user_id)
     return jsonify({"success": True, "data": sent}), 200

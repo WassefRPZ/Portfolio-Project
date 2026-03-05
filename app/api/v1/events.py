@@ -1,21 +1,22 @@
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
-
-facade = BoardGameFacade()
+from app.services import facade
 
 
 # -----------------------------------------------
 # GET /events → liste des événements
 # -----------------------------------------------
 @api_v1.route('/events', methods=['GET'])
+@jwt_required()
 def list_events():
     """
 List events
 ---
 tags:
   - Events
+security:
+  - Bearer: []
 parameters:
   - in: query
     name: city
@@ -24,6 +25,12 @@ parameters:
     name: date
     type: string
     description: "Date ISO 8601 (ex: 2024-12-25)"
+  - in: query
+    name: limit
+    type: integer
+  - in: query
+    name: offset
+    type: integer
 responses:
   200:
     description: List of events
@@ -33,10 +40,16 @@ responses:
     city = request.args.get('city')
     date = request.args.get('date')
 
-    events, error = facade.get_events(city=city, date=date)
+    try:
+        limit = min(int(request.args.get('limit', 50)), 100)
+        offset = max(int(request.args.get('offset', 0)), 0)
+    except (ValueError, TypeError):
+        limit, offset = 50, 0
+
+    events, total_count, error = facade.get_events(city=city, date=date, limit=limit, offset=offset)
     if error:
         return jsonify({"error": error}), 400
-    return jsonify({"success": True, "data": events}), 200
+    return jsonify({"data": events, "total_count": total_count}), 200
 
 
 # -----------------------------------------------
@@ -93,7 +106,7 @@ responses:
   401:
     description: Unauthorized
 """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     # Support multipart/form-data (avec fichier) ou application/json (sans fichier)
     if request.content_type and 'multipart/form-data' in request.content_type:
@@ -107,7 +120,7 @@ responses:
                 except ValueError:
                     return jsonify({"error": f"'{int_field}' doit être un entier"}), 400
     else:
-        data = request.get_json()
+        data = request.get_json(silent=True)
         image_file = None
 
     if not data:
@@ -118,17 +131,26 @@ responses:
         if field not in data:
             return jsonify({"error": f"Champ '{field}' manquant"}), 400
 
+    # Accepter les alias envoyés par le front-end
+    if 'game' in data and 'game_id' not in data:
+        data['game_id'] = data['game']
+    if 'date' in data and 'date_time' not in data:
+        data['date_time'] = data['date']
+    if 'location' in data and 'location_text' not in data:
+        data['location_text'] = data['location']
+
     new_event, error = facade.create_event(data, current_user_id, image_file)
     if error:
         return jsonify({"error": error}), 400
 
-    return jsonify({"success": True, "data": new_event}), 201
+    return jsonify({"event_id": new_event['id'], "event_public": new_event}), 201
 
 
 # -----------------------------------------------
 # GET /events/<event_id> → détails d'un événement
 # -----------------------------------------------
 @api_v1.route('/events/<int:event_id>', methods=['GET'])
+@jwt_required()
 def get_event(event_id):
     """
     Get event details
@@ -182,9 +204,9 @@ def update_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     role = get_jwt().get('role', 'user')
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
@@ -232,7 +254,7 @@ def cancel_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     role = get_jwt().get('role', 'user')
 
     event = facade.get_event_details(event_id)
@@ -279,7 +301,7 @@ def join_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     event = facade.get_event_details(event_id)
     if not event:
@@ -324,7 +346,7 @@ def leave_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     event = facade.get_event_details(event_id)
     if not event:
@@ -343,7 +365,8 @@ def leave_event(event_id):
 # -----------------------------------------------
 # GET /events/<event_id>/comments → voir les commentaires
 # -----------------------------------------------
-@api_v1.route('/events/<int:event_id>/comments', methods=['GET'])
+@api_v1.route('/events/<int:event_id>/comment', methods=['GET'])
+@jwt_required()
 def get_event_comments(event_id):
     """
     Get event comments
@@ -365,14 +388,20 @@ def get_event_comments(event_id):
     if not event:
         return jsonify({"error": "Événement introuvable"}), 404
 
-    comments = facade.get_event_comments(event_id)
-    return jsonify({"success": True, "data": comments}), 200
+    try:
+        limit  = min(int(request.args.get('limit',  50)), 100)
+        offset = max(int(request.args.get('offset',  0)),   0)
+    except (ValueError, TypeError):
+        limit, offset = 50, 0
+
+    comments = facade.get_event_comments(event_id, limit=limit, offset=offset)
+    return jsonify({"success": True, "data": comments, "limit": limit, "offset": offset}), 200
 
 
 # -----------------------------------------------
 # POST /events/<event_id>/comments → ajouter un commentaire
 # -----------------------------------------------
-@api_v1.route('/events/<int:event_id>/comments', methods=['POST'])
+@api_v1.route('/events/<int:event_id>/comment', methods=['POST'])
 @jwt_required()
 def add_event_comment(event_id):
     """
@@ -395,8 +424,8 @@ def add_event_comment(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
-    data = request.get_json()
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True)
 
     if not data or not data.get('content'):
         return jsonify({"error": "Le contenu du commentaire est requis"}), 400
@@ -443,7 +472,7 @@ def kick_participant(event_id, user_id):
       404:
         description: Event or participant not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     role = get_jwt().get('role', 'user')
 
     event = facade.get_event_details(event_id)
@@ -492,7 +521,7 @@ def close_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     role = get_jwt().get('role', 'user')
 
     event = facade.get_event_details(event_id)
@@ -537,7 +566,7 @@ def open_event(event_id):
       404:
         description: Event not found
     """
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     role = get_jwt().get('role', 'user')
 
     event = facade.get_event_details(event_id)

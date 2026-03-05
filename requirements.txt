@@ -8,3 +8,4 @@ mysql-connector-python==8.2.0
 flasgger==0.9.7.1
 cloudinary==1.40.0
 requests==2.31.0
+flask-limiter==3.5.1

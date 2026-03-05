@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -16,7 +16,7 @@ class Post(db.Model):
     post_type  = db.Column(db.Enum('text', 'image', 'news'), nullable=False, default='text')
     content    = db.Column(db.Text, nullable=True)
     image_url  = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relations vers likes et commentaires
     author = db.relationship('User', foreign_keys=[author_id],

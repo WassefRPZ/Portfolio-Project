@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -18,7 +18,7 @@ class Review(db.Model):
     reviewed_user_id = db.Column(db.Integer, db.ForeignKey('users.id'),   nullable=True)
     rating           = db.Column(db.SmallInteger, nullable=False)   # 1 à 5
     comment          = db.Column(db.Text)
-    created_at       = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at       = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         # Empêche de noter deux fois le même événement ou le même joueur.

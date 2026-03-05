@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -12,7 +12,7 @@ class FavoriteGame(db.Model):
 
     user_id  = db.Column(db.Integer, db.ForeignKey('users.id'),  primary_key=True)
     game_id  = db.Column(db.Integer, db.ForeignKey('games.id'),  primary_key=True)
-    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+    added_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relations pour accéder à l'objet User ou Game directement
     user = db.relationship('User', foreign_keys=[user_id],

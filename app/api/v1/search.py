@@ -1,8 +1,6 @@
 from flask import request, jsonify
-from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
-
-facade = BoardGameFacade()
+from app.services import facade
 
 
 # -----------------------------------------------

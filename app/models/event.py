@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -29,7 +29,7 @@ class Event(db.Model):
     cover_url     = db.Column(db.String(255))    
     latitude      = db.Column(db.Float)                # latitude  (OpenCage Geocoding)
     longitude     = db.Column(db.Float)                # longitude (OpenCage Geocoding)
-    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at    = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     creator      = db.relationship('User',             foreign_keys=[creator_id],
                                    backref='events_created', lazy='select')

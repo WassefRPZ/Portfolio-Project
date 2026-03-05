@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import re
 import requests
@@ -230,7 +230,7 @@ class BoardGameFacade:
         events = [e.to_dict() for e in self.events.search(query)]
         return {"users": users, "events": events}
 
-    def get_user_events(self, user_id):
+    def get_user_events(self, user_id, limit=50, offset=0):
         # Événements créés
         created = self.events.get_by_creator(user_id)
 
@@ -241,16 +241,17 @@ class BoardGameFacade:
 
         # Déduplication par id INT
         all_events = {e.id: e for e in created + joined}
-        return [e.to_dict() for e in all_events.values()]
+        events_list = sorted(all_events.values(), key=lambda e: e.date_time or e.created_at, reverse=True)
+        return [e.to_dict() for e in events_list[offset:offset + limit]]
 
     # ==========================================
     # ÉVÉNEMENTS
     # ==========================================
 
-    def get_events(self, city=None, date=None):
-        events, error = self.events.get_open_events(city=city, date=date)
+    def get_events(self, city=None, date=None, limit=50, offset=0):
+        events, total_count, error = self.events.get_open_events(city=city, date=date, limit=limit, offset=offset)
         if error:
-            return [], error
+            return [], 0, error
 
         result = []
         for event in events:
@@ -258,7 +259,7 @@ class BoardGameFacade:
             if event.game_obj:
                 event_data['game'] = event.game_obj.to_dict()
             result.append(event_data)
-        return result, None
+        return result, total_count, None
 
     def get_event(self, event_id):
         event = self.events.get_by_id(event_id)
@@ -285,7 +286,7 @@ class BoardGameFacade:
         except (ValueError, TypeError):
             return None, "Format de date invalide. Utiliser ISO 8601 (ex: 2024-12-25T19:00:00)"
 
-        if event_date_time <= datetime.utcnow():
+        if event_date_time <= datetime.now(timezone.utc).replace(tzinfo=None):
             return None, "La date de l'événement doit être dans le futur"
 
         geo, error = self._geocode(data['location_text'])
@@ -313,7 +314,18 @@ class BoardGameFacade:
             max_players=data['max_players'],
             cover_url=cover_url,
         )
-        self.events.save(event)
+        db.session.add(event)
+        db.session.flush()
+
+        # Le créateur est automatiquement participant
+        creator_participation = EventParticipant(
+            event_id=event.id,
+            user_id=creator_id,
+            status='confirmed',
+        )
+        db.session.add(creator_participation)
+        db.session.commit()
+
         return event.to_dict(), None
 
     def update_event(self, event_id, data):
@@ -409,8 +421,8 @@ class BoardGameFacade:
     # COMMENTAIRES D'ÉVÉNEMENTS
     # ==========================================
 
-    def get_event_comments(self, event_id):
-        comments = self.comments.get_by_event(event_id)
+    def get_event_comments(self, event_id, limit=50, offset=0):
+        comments = self.comments.get_by_event(event_id, limit=limit, offset=offset)
         return [comment.to_dict() for comment in comments]
 
     def add_comment(self, event_id, user_id, content):

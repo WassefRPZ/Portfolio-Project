@@ -10,6 +10,7 @@ import sys
 # ── Doit être défini AVANT tout import de l'app ─────────────────────────────
 # load_dotenv() ne surcharge pas les variables déjà présentes dans os.environ
 os.environ['DB_NAME'] = 'boardgame_hub_test'
+os.environ['RATELIMIT_ENABLED'] = 'False'
 # ─────────────────────────────────────────────────────────────────────────────
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,7 +22,11 @@ from unittest.mock import patch
 
 # ── Crée la base de test si elle n'existe pas ────────────────────────────────
 def _ensure_test_db():
-    conn = mysql.connector.connect(host='127.0.0.1', user='dev_user', password='')
+    conn = mysql.connector.connect(
+        host=os.getenv('DB_HOST', '127.0.0.1'),
+        user=os.getenv('DB_USER', 'dev_user'),
+        password=os.getenv('DB_PASSWORD', '')
+    )
     cur  = conn.cursor()
     cur.execute(
         'CREATE DATABASE IF NOT EXISTS boardgame_hub_test '
@@ -36,12 +41,13 @@ _ensure_test_db()
 # ── Import de l'app (après avoir fixé DB_NAME) ───────────────────────────────
 from app import create_app, db as _db
 from app.models import Game
+from app.services.facade import BoardGameFacade
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Valeurs de retour des mocks externes
-GEOCODE_RESULT    = ('Paris', 'Île-de-France', 48.8566, 2.3522)
-CLOUDINARY_URL    = 'https://res.cloudinary.com/test/image/upload/v1/test.jpg'
+GEOCODE_RESULT    = ({'latitude': 48.8566, 'longitude': 2.3522, 'city': 'Paris', 'region': 'Île-de-France'}, None)
+CLOUDINARY_URL    = ('https://res.cloudinary.com/test/image/upload/v1/test.jpg', None)
 VALID_PASSWORD    = 'Test@1234'
 
 
@@ -61,31 +67,39 @@ def client(app):
     return app.test_client()
 
 
-# ── Nettoyage après chaque test ───────────────────────────────────────────────
-@pytest.fixture(autouse=True)
-def clean_tables(app):
-    """Vide toutes les tables APRÈS chaque test (teardown)."""
-    yield
+# ── Nettoyage avant et après chaque test ──────────────────────────────────────
+def _wipe(app):
+    """Vide toutes les tables de la base de test."""
     with app.app_context():
+        _db.session.remove()
+        _db.session.execute(_db.text('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED'))
         _db.session.execute(_db.text('SET FOREIGN_KEY_CHECKS = 0'))
         for table in [
             'reviews', 'post_comments', 'post_likes', 'posts',
             'event_comments', 'event_participants', 'friends',
             'favorite_games', 'events', 'games', 'profiles', 'users',
         ]:
-            _db.session.execute(_db.text(f'TRUNCATE TABLE {table}'))
+            _db.session.execute(_db.text(f'DELETE FROM {table}'))
         _db.session.execute(_db.text('SET FOREIGN_KEY_CHECKS = 1'))
         _db.session.commit()
+
+
+@pytest.fixture(autouse=True)
+def clean_tables(app):
+    """Vide toutes les tables AVANT et APRÈS chaque test."""
+    _wipe(app)
+    yield
+    _wipe(app)
 
 
 # ── Mock des services externes (fixture opt-in) ───────────────────────────────
 @pytest.fixture
 def mock_ext():
     """Mock OpenCage et Cloudinary pour éviter les appels HTTP réels."""
-    with patch('app.services.facade.BoardGameFacade._geocode',
-               return_value=GEOCODE_RESULT), \
-         patch('app.services.facade.BoardGameFacade._upload_to_cloudinary',
-               return_value=CLOUDINARY_URL):
+    with patch.object(BoardGameFacade, '_geocode',
+                      return_value=GEOCODE_RESULT), \
+         patch.object(BoardGameFacade, '_upload_to_cloudinary',
+                      return_value=CLOUDINARY_URL):
         yield
 
 
@@ -115,14 +129,14 @@ def auth(token):
 def make_game(app, name='Catan', min_p=2, max_p=4, time=60):
     """Crée un jeu directement en base et retourne son id."""
     with app.app_context():
-        game = Game(
-            name=name, description='Test game',
-            min_players=min_p, max_players=max_p,
-            play_time_minutes=time,
-        )
-        _db.session.add(game)
-        _db.session.commit()
-        return game.id
+        with _db.engine.connect() as conn:
+            result = conn.execute(_db.text(
+                "INSERT INTO games (name, description, min_players, max_players, play_time_min) "
+                "VALUES (:n, :d, :min_p, :max_p, :t)"
+            ), {'n': name, 'd': 'Test game', 'min_p': min_p, 'max_p': max_p, 't': time})
+            conn.commit()
+            gid = result.lastrowid
+    return gid
 
 
 # ── Fixtures utilisateurs ─────────────────────────────────────────────────────
@@ -151,4 +165,4 @@ def event_id(client, app, user_a, mock_ext):
         'date_time': '2030-06-15T19:00:00',
         'max_players': 4,
     }, headers=auth(user_a['token']))
-    return resp.get_json()['data']['id']
+    return resp.get_json()['event_public']['id']

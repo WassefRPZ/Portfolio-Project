@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -16,7 +16,7 @@ class EventParticipant(db.Model):
     event_id  = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
     user_id   = db.Column(db.Integer, db.ForeignKey('users.id'),  nullable=False)
     status    = db.Column(db.Enum('confirmed', 'pending'), default='confirmed')
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         db.UniqueConstraint('event_id', 'user_id', name='uq_event_user'),

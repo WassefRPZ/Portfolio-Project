@@ -1,9 +1,7 @@
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt
-from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
-
-facade = BoardGameFacade()
+from app.services import facade
 
 
 # -----------------------------------------------
@@ -187,7 +185,7 @@ def create_game():
     if claims.get('role') != 'admin':
         return jsonify({"error": "Action réservée aux administrateurs"}), 403
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 
@@ -226,7 +224,7 @@ def update_game(game_id):
     if claims.get('role') != 'admin':
         return jsonify({"error": "Action réservée aux administrateurs"}), 403
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 

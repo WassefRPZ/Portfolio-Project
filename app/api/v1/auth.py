@@ -1,9 +1,8 @@
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token
-from app.services.facade import BoardGameFacade
 from app.api.v1 import api_v1
-
-facade = BoardGameFacade()
+from app.services import facade
+from app import limiter
 
 
 # -----------------------------------------------
@@ -58,7 +57,7 @@ responses:
   400:
     description: Invalid input
 """
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
@@ -90,6 +89,7 @@ responses:
 # Body: { email, password }
 # -----------------------------------------------
 @api_v1.route('/auth/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     """
     Login user
@@ -118,7 +118,7 @@ def login():
       401:
         description: Invalid credentials
     """
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
