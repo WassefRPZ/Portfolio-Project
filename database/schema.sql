@@ -4,7 +4,6 @@
 --  Encodage : utf8mb4 (support des emojis et des caractères spéciaux)
 --
 --  Intégrations externes :
---    - Board Game Atlas API  → champ id_api dans la table games
 --    - OpenCage Geocoding API → champs city / region / location_text dans events
 --    - Cloudinary            → champs *_url (VARCHAR) dans profiles et events
 --
@@ -57,19 +56,17 @@ CREATE TABLE profiles (
 -- -----------------------------------------------------------------------------
 -- TABLE : games
 -- Catalogue de jeux de société.
--- id_api     : identifiant unique STRING retourné par Board Game Atlas API.
--- image_url  : URL de la pochette fournie par Board Game Atlas.
--- play_time_min : durée de partie en minutes (champ "min_playtime" de l'API).
+-- image_url     : URL de la pochette du jeu.
+-- play_time_min : durée de partie en minutes.
 -- -----------------------------------------------------------------------------
 CREATE TABLE games (
     id            INT AUTO_INCREMENT  PRIMARY KEY,
-    id_api        VARCHAR(50)         NOT NULL UNIQUE,  -- ID Board Game Atlas (ex: "OIXt3DmJU0")
     name          VARCHAR(200)        NOT NULL UNIQUE,
     description   TEXT,
     min_players   INT                 NOT NULL,
     max_players   INT                 NOT NULL,
     play_time_min INT                 NOT NULL,          -- durée en minutes
-    image_url     VARCHAR(255)                           -- URL image Board Game Atlas
+    image_url     VARCHAR(255)                           -- URL image
 );
 
 -- -----------------------------------------------------------------------------
@@ -173,13 +170,17 @@ CREATE TABLE friends (
 -- -----------------------------------------------------------------------------
 -- TABLE : posts
 -- Publications du fil d'actualité de la plateforme.
--- Un post appartient à un auteur (author_id).
+-- post_type : 'text' (texte seul), 'image' (photo + texte optionnel), 'news' (actualité)
+-- content et image_url sont optionnels mais au moins l'un doit être fourni (côté appli).
+-- image_url : URL Cloudinary si une image est jointe.
 -- Supprimé automatiquement si l'auteur est supprimé.
 -- -----------------------------------------------------------------------------
 CREATE TABLE posts (
     id         INT AUTO_INCREMENT  PRIMARY KEY,
     author_id  INT                 NOT NULL,  -- FK vers users
-    content    TEXT                NOT NULL,
+    post_type  ENUM('text', 'image', 'news') NOT NULL DEFAULT 'text',
+    content    TEXT,                          -- texte optionnel
+    image_url  VARCHAR(255),                  -- URL Cloudinary (optionnel)
     created_at DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     -- Clé étrangère : suppression d'un utilisateur → suppression de ses posts
@@ -273,8 +274,43 @@ CREATE TABLE favorite_games (
         ON DELETE CASCADE
 );
 
+-- -----------------------------------------------------------------------------
+-- TABLE : post_likes
+-- Likes des utilisateurs sur les posts. Clé primaire composite (user_id, post_id).
+-- Supprimé automatiquement si l'utilisateur ou le post est supprimé.
+-- -----------------------------------------------------------------------------
+CREATE TABLE post_likes (
+    user_id    INT  NOT NULL,  -- FK vers users
+    post_id    INT  NOT NULL,  -- FK vers posts
+
+    PRIMARY KEY (user_id, post_id),
+
+    CONSTRAINT fk_pl_user
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pl_post
+        FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------------------------------
+-- TABLE : post_comments
+-- Commentaires des utilisateurs sur les posts.
+-- Supprimé automatiquement si l'utilisateur ou le post est supprimé.
+-- -----------------------------------------------------------------------------
+CREATE TABLE post_comments (
+    id         INT AUTO_INCREMENT  PRIMARY KEY,
+    post_id    INT                 NOT NULL,  -- FK vers posts
+    user_id    INT                 NOT NULL,  -- FK vers users
+    content    TEXT                NOT NULL,
+    created_at DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_pc_post
+        FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pc_user
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- =============================================================================
 --  FIN DU SCRIPT — Base de données boardgame_hub créée et prête à l'emploi.
 --  Tables : users, profiles, games, events, event_participants, friends,
---           posts, reviews, event_comments, favorite_games
+--           posts, post_likes, post_comments, reviews, event_comments, favorite_games
 -- =============================================================================

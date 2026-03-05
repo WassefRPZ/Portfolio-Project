@@ -54,35 +54,30 @@ with app.app_context():
             print(f"  Admin existe déjà : {admin_data['username']}")
 
     # -----------------------------------------------------------------------
-    # JEUX — id_api correspond à l'identifiant Board Game Atlas API.
+    # JEUX
     # -----------------------------------------------------------------------
     games_data = [
         {
-            "id_api": "OIXt3DmJU0",
             "name": "Catan",
             "description": "Commerce et stratégie.",
             "min_players": 3, "max_players": 4, "play_time_minutes": 90,
         },
         {
-            "id_api": "1ux8BkOBT9",
             "name": "Dixit",
             "description": "Jeu d'imagination.",
             "min_players": 3, "max_players": 6, "play_time_minutes": 30,
         },
         {
-            "id_api": "4OE3e7Vvfd",
             "name": "Uno",
             "description": "Jeu de cartes rapide.",
             "min_players": 2, "max_players": 10, "play_time_minutes": 15,
         },
         {
-            "id_api": "kPDxpJZ8PD",
             "name": "Monopoly",
             "description": "Jeu immobilier classique.",
             "min_players": 2, "max_players": 8, "play_time_minutes": 120,
         },
         {
-            "id_api": "nl3Tgg2SjE",
             "name": "Ticket to Ride",
             "description": "Aventure ferroviaire.",
             "min_players": 2, "max_players": 5, "play_time_minutes": 60,
@@ -93,7 +88,6 @@ with app.app_context():
     for game_info in games_data:
         if not Game.query.filter_by(name=game_info["name"]).first():
             new_game = Game(
-                id_api=game_info["id_api"],
                 name=game_info["name"],
                 description=game_info["description"],
                 min_players=game_info["min_players"],
