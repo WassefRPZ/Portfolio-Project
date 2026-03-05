@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from flask_jwt_extended import jwt_required
 from app.api.v1 import api_v1
 from app.services import facade
 
@@ -7,6 +8,7 @@ from app.services import facade
 # GET /search?q=... → recherche globale (utilisateurs + événements)
 # -----------------------------------------------
 @api_v1.route('/search', methods=['GET'])
+@jwt_required()
 def global_search():
     """
     Global search across users and events

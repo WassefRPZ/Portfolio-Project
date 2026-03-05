@@ -68,6 +68,7 @@ def create_review():
 # GET /users/<user_id>/reviews → avis reçus par un joueur
 # -----------------------------------------------
 @api_v1.route('/users/<int:user_id>/reviews', methods=['GET'])
+@jwt_required()
 def get_user_reviews(user_id):
     """
     Get reviews for a user
@@ -96,6 +97,7 @@ def get_user_reviews(user_id):
 # GET /events/<event_id>/reviews → avis sur un événement
 # -----------------------------------------------
 @api_v1.route('/events/<int:event_id>/reviews', methods=['GET'])
+@jwt_required()
 def get_event_reviews(event_id):
     """
     Get reviews for an event

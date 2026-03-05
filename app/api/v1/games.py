@@ -103,6 +103,7 @@ def get_game(game_id):
 # GET /games/<game_id>/events → événements utilisant ce jeu
 # -----------------------------------------------
 @api_v1.route('/games/<int:game_id>/events', methods=['GET'])
+@jwt_required()
 def get_game_events(game_id):
     """
     Get events for a game

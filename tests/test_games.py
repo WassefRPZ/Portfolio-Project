@@ -65,6 +65,7 @@ class TestGameEvents:
             'max_players': 4,
         }, headers=auth(user_a['token']))
 
-        resp = client.get(f'/api/v1/games/{gid}/events')
+        resp = client.get(f'/api/v1/games/{gid}/events',
+                          headers=auth(user_a['token']))
         assert resp.status_code == 200
         assert len(resp.get_json()['data']) == 1

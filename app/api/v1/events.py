@@ -126,11 +126,6 @@ responses:
     if not data:
         return jsonify({"error": "Pas de données envoyées"}), 400
 
-    required = ['title', 'game_id', 'location_text', 'date_time', 'max_players']
-    for field in required:
-        if field not in data:
-            return jsonify({"error": f"Champ '{field}' manquant"}), 400
-
     # Accepter les alias envoyés par le front-end
     if 'game' in data and 'game_id' not in data:
         data['game_id'] = data['game']
@@ -138,6 +133,11 @@ responses:
         data['date_time'] = data['date']
     if 'location' in data and 'location_text' not in data:
         data['location_text'] = data['location']
+
+    required = ['title', 'game_id', 'location_text', 'date_time', 'max_players']
+    for field in required:
+        if field not in data:
+            return jsonify({"error": f"Champ '{field}' manquant"}), 400
 
     new_event, error = facade.create_event(data, current_user_id, image_file)
     if error:
@@ -363,7 +363,7 @@ def leave_event(event_id):
 
 
 # -----------------------------------------------
-# GET /events/<event_id>/comments → voir les commentaires
+# GET /events/<event_id>/comment → voir les commentaires
 # -----------------------------------------------
 @api_v1.route('/events/<int:event_id>/comment', methods=['GET'])
 @jwt_required()
@@ -399,7 +399,7 @@ def get_event_comments(event_id):
 
 
 # -----------------------------------------------
-# POST /events/<event_id>/comments → ajouter un commentaire
+# POST /events/<event_id>/comment → ajouter un commentaire
 # -----------------------------------------------
 @api_v1.route('/events/<int:event_id>/comment', methods=['POST'])
 @jwt_required()

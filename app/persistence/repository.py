@@ -55,7 +55,8 @@ class UserRepository(SQLAlchemyRepository):
             .join(Profile, User.id == Profile.user_id)
         )
         if query:
-            q = q.filter(Profile.username.like(f'%{query}%'))
+            safe_q = query.replace('%', r'\%').replace('_', r'\_')
+            q = q.filter(Profile.username.like(f'%{safe_q}%'))
         if city:
             q = q.filter(Profile.city == city)
         return q.limit(20).all()
@@ -96,7 +97,8 @@ class GameRepository(SQLAlchemyRepository):
         return Game.query.order_by(Game.name).all()
 
     def search(self, query):
-        return Game.query.filter(Game.name.like(f'%{query}%')).limit(10).all()
+        safe_q = query.replace('%', r'\%').replace('_', r'\_')
+        return Game.query.filter(Game.name.like(f'%{safe_q}%')).limit(10).all()
 
     def get_popular(self):
         """Retourne les jeux les plus utilisés dans les événements."""
@@ -137,27 +139,27 @@ class EventRepository(SQLAlchemyRepository):
 
     def get_open_events(self, city=None, date=None, limit=50, offset=0):
         """Retourne les événements ouverts, avec filtres optionnels et pagination."""
-        q = (
-            Event.query
-            .options(
-                joinedload(Event.game_obj),
-                joinedload(Event.participants),
-            )
-            .filter_by(status='open')
-        )
+        base = Event.query.filter_by(status='open')
 
         if city:
-            q = q.filter_by(city=city)
+            base = base.filter_by(city=city)
 
         if date:
             try:
                 target = datetime.fromisoformat(date)
-                q = q.filter(db.func.date(Event.date_time) == target.date())
+                base = base.filter(db.func.date(Event.date_time) == target.date())
             except (ValueError, TypeError):
                 return None, 0, "Format de date invalide. Utiliser ISO 8601 (ex: 2024-12-25)"
 
-        total_count = q.with_entities(func.count(Event.id)).scalar()
-        events = q.order_by(Event.date_time).offset(offset).limit(limit).all()
+        total_count = base.with_entities(func.count(Event.id)).scalar()
+        events = (
+            base
+            .options(joinedload(Event.game_obj), joinedload(Event.participants))
+            .order_by(Event.date_time)
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
         return events, total_count, None
 
     def get_by_creator(self, creator_id):
@@ -179,7 +181,8 @@ class EventRepository(SQLAlchemyRepository):
 
     def search(self, query):
         """Recherche par mot-clé dans title et description (événements ouverts uniquement)."""
-        pattern = f'%{query}%'
+        safe_q = query.replace('%', r'\%').replace('_', r'\_')
+        pattern = f'%{safe_q}%'
         return (
             Event.query
             .filter(

@@ -87,7 +87,7 @@ class TestMyEvents:
                           headers=auth(user_a['token']))
         assert resp.status_code == 200
         data = resp.get_json()['data']
-        assert data['created'] == [] or isinstance(data['created'], list)
+        assert data == [] or isinstance(data, list)
 
 
 class TestFavoriteGames:

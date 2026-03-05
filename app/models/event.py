@@ -18,7 +18,7 @@ class Event(db.Model):
     title         = db.Column(db.String(200), nullable=False)
     description   = db.Column(db.Text)
     city          = db.Column(db.String(100), nullable=False)
-    region        = db.Column(db.String(100), default='')
+    region        = db.Column(db.String(100), nullable=True, default=None)
     location_text = db.Column(db.String(255), nullable=False)
     date_time     = db.Column(db.DateTime,    nullable=False)
     max_players   = db.Column(db.Integer,     nullable=False)

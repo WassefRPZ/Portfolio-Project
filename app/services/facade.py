@@ -274,7 +274,7 @@ class BoardGameFacade:
         if event.game_obj:
             event_data['game'] = event.game_obj.to_dict()
         if event.creator:
-            event_data['creator'] = event.creator.to_dict()
+            event_data['creator'] = event.creator.to_public_dict()
         return event_data
 
     def create_event(self, data, creator_id, image_file=None):
@@ -286,8 +286,13 @@ class BoardGameFacade:
         except (ValueError, TypeError):
             return None, "Format de date invalide. Utiliser ISO 8601 (ex: 2024-12-25T19:00:00)"
 
-        if event_date_time <= datetime.now(timezone.utc).replace(tzinfo=None):
-            return None, "La date de l'événement doit être dans le futur"
+        now_utc = datetime.now(timezone.utc)
+        if event_date_time.tzinfo:
+            if event_date_time <= now_utc:
+                return None, "La date de l'événement doit être dans le futur"
+        else:
+            if event_date_time <= now_utc.replace(tzinfo=None):
+                return None, "La date de l'événement doit être dans le futur"
 
         geo, error = self._geocode(data['location_text'])
         if error:
@@ -600,11 +605,13 @@ class BoardGameFacade:
         return {"likes_count": post.likes.count()}, None
 
     def unlike_post(self, user_id, post_id):
+        post = self.posts.get_by_id(post_id)
+        if not post:
+            return None, "Post introuvable"
         like = self.post_likes.get(user_id, post_id)
         if not like:
             return None, "Vous n'avez pas liké ce post"
         self.post_likes.delete(like)
-        post = self.posts.get_by_id(post_id)
         return {"likes_count": post.likes.count()}, None
 
     def add_post_comment(self, user_id, post_id, content):
@@ -702,10 +709,10 @@ class BoardGameFacade:
             return None, "La note doit être un entier entre 1 et 5"
 
         # Exactement une cible doit être fournie
-        if event_id and reviewed_user_id:
+        if event_id is not None and reviewed_user_id is not None:
             return None, "Un avis ne peut cibler qu'un événement OU un joueur, pas les deux"
 
-        if not event_id and not reviewed_user_id:
+        if event_id is None and reviewed_user_id is None:
             return None, "Un avis doit cibler un événement (event_id) ou un joueur (reviewed_user_id)"
 
         if event_id:

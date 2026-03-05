@@ -88,7 +88,8 @@ class TestGetReviews:
                     json={'event_id': event_id, 'rating': 5},
                     headers=auth(user_b['token']))
 
-        resp = client.get(f'/api/v1/events/{event_id}/reviews')
+        resp = client.get(f'/api/v1/events/{event_id}/reviews',
+                          headers=auth(user_b['token']))
         assert resp.status_code == 200
         data = resp.get_json()['data']
         assert len(data) == 1
@@ -101,7 +102,8 @@ class TestGetReviews:
                     json={'reviewed_user_id': a_id, 'rating': 4},
                     headers=auth(user_b['token']))
 
-        resp = client.get(f'/api/v1/users/{a_id}/reviews')
+        resp = client.get(f'/api/v1/users/{a_id}/reviews',
+                          headers=auth(user_b['token']))
         assert resp.status_code == 200
         assert len(resp.get_json()['data']) == 1
 
