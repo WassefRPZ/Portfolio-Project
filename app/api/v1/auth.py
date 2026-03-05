@@ -68,7 +68,7 @@ responses:
         return jsonify({"error": error}), 400
 
     access_token = create_access_token(
-        identity=user['id'],  # INT — utilisé comme identité JWT
+        identity=str(user['id']),
         additional_claims={
             'username': user.get('username'),
             'email':    user['email'],
@@ -135,7 +135,7 @@ def login():
         return jsonify({"error": error}), 401
 
     access_token = create_access_token(
-        identity=user['id'],  # INT — utilisé comme identité JWT
+        identity=str(user['id']),
         additional_claims={
             'username': user.get('username'),
             'email':    user['email'],

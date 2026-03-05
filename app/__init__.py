@@ -28,6 +28,17 @@ def create_app():
     origins = app.config.get("CORS_ORIGINS", "*")
     CORS(app, origins=origins.split(",") if origins != "*" else "*")
 
+    # JWT: identity is stored as str in the token, convert back to int
+    @jwt.user_identity_loader
+    def user_identity_lookup(user_id):
+        return str(user_id)
+
+    @jwt.user_lookup_loader
+    def user_lookup_callback(_jwt_header, jwt_data):
+        identity = jwt_data["sub"]
+        from app.models import User
+        return User.query.get(int(identity))
+
     # Swagger
     swagger_config = {
         "headers": [],

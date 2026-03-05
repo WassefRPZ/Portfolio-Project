@@ -1,168 +1,171 @@
-export default function Home() {
-  const posts = [
-    {
-      id: 1,
-      initials: "AM",
-      name: "Alice Martinez",
-      time: "2 hours ago",
-      content:
-        "Just finished an epic 4-hour session of Gloomhaven! Our party finally defeated the boss. What an incredible game! 🎲",
-    },
-    {
-      id: 2,
-      initials: "BK",
-      name: "Ben Kim",
-      time: "5 hours ago",
-      content:
-        "Won my first Catan tournament today! The longest road strategy finally paid off. Thanks everyone for the great matches! 🏆",
-    },
-  ];
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { getFeed, createPost } from "../api/posts";
+import { getEvents } from "../api/events";
+import "../styles/Home.css";
 
-  const events = [
-    { id: 1, title: "D&D Campaign", time: "Tomorrow at 7:00 PM", players: "6 players" },
-    { id: 2, title: "Catan Tournament", time: "Friday at 6:30 PM", players: "12 players" },
-    { id: 3, title: "Board Game Night", time: "Sunday at 5:00 PM", players: "8 players" },
-    { id: 4, title: "Magic: The Gathering", time: "Jan 15 at 8:00 PM", players: "4 players" },
-  ];
+function timeAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function getInitials(name) {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function formatEventDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export default function Home() {
+  const { token, user } = useAuth();
+  const navigate = useNavigate();
+
+  const [posts, setPosts] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [newPost, setNewPost] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [feedRes, eventsRes] = await Promise.all([
+          getFeed(token),
+          getEvents(),
+        ]);
+        setPosts(feedRes.data || []);
+        setEvents((eventsRes.data || []).slice(0, 4));
+      } catch (err) {
+        console.error("Home load error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [token]);
+
+  async function handlePost() {
+    if (!newPost.trim() || posting) return;
+    setPosting(true);
+    try {
+      const res = await createPost(token, newPost.trim());
+      setPosts((prev) => [res.data, ...prev]);
+      setNewPost("");
+    } catch (err) {
+      console.error("Post error:", err);
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  const myInitials = user ? getInitials(user.username || user.email) : "?";
+
+  if (loading) {
+    return <div className="home-loading">Loading...</div>;
+  }
 
   return (
-    <div style={{ display: "flex", gap: 24 }}>
+    <div className="home-layout">
 
       {/* MAIN CENTER */}
-      <div style={{ flex: 1 }}>
+      <div className="home-main">
 
         {/* Share box */}
-        <div
-          style={{
-            background: "#F4F1EA",
-            padding: 16,
-            borderRadius: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            marginBottom: 24,
-          }}
-        >
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              background: "#6D4C41",
-              color: "#FFF",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: "bold",
-            }}
-          >
-            JD
-          </div>
+        <div className="share-box">
+          <div className="avatar">{myInitials}</div>
 
           <input
+            value={newPost}
+            onChange={(e) => setNewPost(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handlePost()}
             placeholder="Share your gaming experience..."
-            style={{
-              flex: 1,
-              padding: 12,
-              borderRadius: 12,
-              border: "none",
-              outline: "none",
-              background: "#E8E3D8",
-            }}
+            className="share-input"
           />
 
           <button
-            style={{
-              padding: "10px 18px",
-              borderRadius: 12,
-              border: "none",
-              background: "#6D4C41",
-              color: "#FFF",
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
+            onClick={handlePost}
+            disabled={posting || !newPost.trim()}
+            className="share-btn"
           >
-            Post
+            {posting ? "..." : "Post"}
           </button>
         </div>
 
         {/* Posts */}
+        {posts.length === 0 && (
+          <div className="post-empty">
+            No posts yet. Be the first to share!
+          </div>
+        )}
+
         {posts.map((post) => (
-          <div
-            key={post.id}
-            style={{
-              background: "#F4F1EA",
-              padding: 20,
-              borderRadius: 16,
-              marginBottom: 20,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "50%",
-                  background: "#6D4C41",
-                  color: "#FFF",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: "bold",
-                }}
-              >
-                {post.initials}
+          <div key={post.id} className="post-card">
+            <div className="post-header">
+              <div className="avatar avatar--lg">
+                {getInitials(post.username)}
               </div>
 
               <div>
-                <div style={{ fontWeight: 700 }}>{post.name}</div>
-                <div style={{ fontSize: 13, color: "#777" }}>{post.time}</div>
+                <div className="post-username">{post.username || "User"}</div>
+                <div className="post-time">
+                  {timeAgo(post.created_at)}
+                </div>
               </div>
             </div>
 
-            <div style={{ marginTop: 12, lineHeight: 1.6 }}>
-              {post.content}
+            <div className="post-content">{post.content}</div>
+
+            <div className="post-stats">
+              <span>{post.likes_count || 0} likes</span>
+              <span>{post.comments_count || 0} comments</span>
             </div>
           </div>
         ))}
       </div>
 
       {/* RIGHT COLUMN */}
-      <div style={{ width: 320 }}>
-        <h3 style={{ marginBottom: 16 }}>Upcoming Events</h3>
+      <div className="home-sidebar">
+        <h3>Upcoming Events</h3>
+
+        {events.length === 0 && (
+          <div className="sidebar-empty">No upcoming events.</div>
+        )}
 
         {events.map((event) => (
-          <div
-            key={event.id}
-            style={{
-              background: "#E8E3D8",
-              padding: 16,
-              borderRadius: 16,
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ fontWeight: 700 }}>{event.title}</div>
-            <div style={{ marginTop: 6, fontSize: 14, color: "#555" }}>
-              {event.time}
+          <div key={event.id} className="event-mini">
+            <div className="event-mini__title">{event.title}</div>
+            <div className="event-mini__date">
+              {formatEventDate(event.date_time)}
             </div>
-            <div style={{ marginTop: 6, fontSize: 14, color: "#6D4C41" }}>
-              {event.players}
+            <div className="event-mini__players">
+              {event.current_players}/{event.max_players} players
             </div>
           </div>
         ))}
 
-        <button
-          style={{
-            width: "100%",
-            padding: 14,
-            borderRadius: 14,
-            border: "none",
-            background: "#6D4C41",
-            color: "#FFF",
-            fontWeight: "bold",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={() => navigate("/events")} className="btn-primary">
           View All Events
         </button>
       </div>

@@ -15,3 +15,5 @@ dist/
 *.swp
 *.log
 instance/
+.bin
+node_modules/

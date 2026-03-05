@@ -1,15 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const linkStyle = ({ isActive }) => ({
-  display: "block",
-  padding: "12px 14px",
-  marginBottom: 8,
-  borderRadius: 10,
-  textDecoration: "none",
-  color: isActive ? "#FFFFFF" : "#2E2E2E",
-  background: isActive ? "#6D4C41" : "transparent",
-});
+import "../styles/Sidebar.css";
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -21,34 +12,19 @@ export default function Sidebar() {
   }
 
   return (
-    <aside style={{ width: 260, padding: 16, background: "#F5F1E6" }}>
-      <div style={{ fontWeight: 800, color: "#6D4C41", marginBottom: 16 }}>
-        🎲 BoardGame
+    <aside className="sidebar">
+      <div className="sidebar__brand">🎲 BoardGame</div>
+
+      <NavLink to="/home" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>Home</NavLink>
+      <NavLink to="/friends" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>Friends</NavLink>
+      <NavLink to="/events" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>Events</NavLink>
+      <NavLink to="/games" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>Games</NavLink>
+
+      <div className="sidebar__create">
+        <NavLink to="/create-event" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>+ Create Event</NavLink>
       </div>
 
-      <NavLink to="/home" style={linkStyle}>Home</NavLink>
-      <NavLink to="/friends" style={linkStyle}>Friends</NavLink>
-      <NavLink to="/events" style={linkStyle}>Events</NavLink>
-      <NavLink to="/games" style={linkStyle}>Games</NavLink>
-
-      <div style={{ marginTop: 16 }}>
-        <NavLink to="/create-event" style={linkStyle}>+ Create Event</NavLink>
-      </div>
-
-      <button
-        onClick={handleLogout}
-        style={{
-          marginTop: 16,
-          padding: 12,
-          width: "100%",
-          borderRadius: 10,
-          border: "none",
-          background: "#6D4C41",
-          color: "#FFFFFF",
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
-      >
+      <button onClick={handleLogout} className="sidebar__logout">
         Logout
       </button>
     </aside>
