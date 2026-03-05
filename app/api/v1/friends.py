@@ -176,3 +176,26 @@ def remove_friend(friend_id):
         return jsonify({"error": error}), 400
 
     return jsonify({"success": True, "message": "Ami supprimé"}), 200
+
+
+# -----------------------------------------------
+# GET /friends/sent → voir ses demandes envoyées en attente
+# -----------------------------------------------
+@api_v1.route('/friends/sent', methods=['GET'])
+@jwt_required()
+def get_sent_requests():
+    """
+    Get pending friend requests sent by the current user
+    ---
+    tags:
+      - Friends
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Pending sent requests
+    """
+    current_user_id = get_jwt_identity()
+
+    sent = facade.get_sent_requests(current_user_id)
+    return jsonify({"success": True, "data": sent}), 200

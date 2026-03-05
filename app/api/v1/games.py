@@ -29,15 +29,12 @@ responses:
 # GET /games/search?q=catan → rechercher un jeu par nom
 # -----------------------------------------------
 @api_v1.route('/games/search', methods=['GET'])
-@jwt_required()
 def search_games():
     """
     Search games by name
     ---
     tags:
       - Games
-    security:
-      - Bearer: []
     parameters:
       - name: q
         in: query

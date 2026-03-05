@@ -120,3 +120,38 @@ def get_event_reviews(event_id):
         return jsonify({"error": error}), 404
 
     return jsonify({"success": True, "data": reviews}), 200
+
+
+# -----------------------------------------------
+# DELETE /reviews/<review_id> → supprimer son avis
+# -----------------------------------------------
+@api_v1.route('/reviews/<int:review_id>', methods=['DELETE'])
+@jwt_required()
+def delete_review(review_id):
+    """
+    Delete a review
+    ---
+    tags:
+      - Reviews
+    security:
+      - Bearer: []
+    parameters:
+      - name: review_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Review deleted
+      403:
+        description: Not the author
+      404:
+        description: Review not found
+    """
+    current_user_id = get_jwt_identity()
+    result, error = facade.delete_review(review_id, current_user_id)
+    if error:
+        status = 404 if "introuvable" in error else 403
+        return jsonify({"error": error}), status
+
+    return jsonify({"success": True, "message": "Avis supprimé"}), 200
