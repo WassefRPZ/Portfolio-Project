@@ -21,7 +21,11 @@ from unittest.mock import patch
 
 # ── Crée la base de test si elle n'existe pas ────────────────────────────────
 def _ensure_test_db():
-    conn = mysql.connector.connect(host='127.0.0.1', user='dev_user', password='')
+    conn = mysql.connector.connect(
+        host=os.getenv('DB_HOST', '127.0.0.1'),
+        user=os.getenv('DB_USER', 'dev_user'),
+        password=os.getenv('DB_PASSWORD', '')
+    )
     cur  = conn.cursor()
     cur.execute(
         'CREATE DATABASE IF NOT EXISTS boardgame_hub_test '

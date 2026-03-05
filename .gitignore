@@ -15,3 +15,5 @@ dist/
 *.swp
 *.log
 instance/
+test_manuel_complet.py
+test_api_externes.py
