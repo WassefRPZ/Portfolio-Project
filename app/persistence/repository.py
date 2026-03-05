@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 from app import db
 from app.models import (
     User, Profile, Game, Event, EventParticipant,
-    EventComment, Friend, FavoriteGame, Post, Review
+    EventComment, Friend, FavoriteGame, Post, PostLike, PostComment, Review
 )
 
 
@@ -100,10 +100,6 @@ class GameRepository(SQLAlchemyRepository):
 
     def get_by_id(self, game_id):
         return Game.query.filter_by(id=game_id).first()
-
-    def get_by_api_id(self, id_api):
-        """Recherche un jeu par son identifiant Board Game Atlas."""
-        return Game.query.filter_by(id_api=id_api).first()
 
     def get_by_name(self, name):
         return Game.query.filter_by(name=name).first()
@@ -250,10 +246,10 @@ class EventCommentRepository(SQLAlchemyRepository):
         super().__init__(EventComment)
 
     def get_by_event(self, event_id):
-        """Charge les commentaires avec leurs auteurs en une seule requête."""
+        """Charge les commentaires avec leurs auteurs et profils en une seule requête."""
         return (
             EventComment.query
-            .options(joinedload(EventComment.author))
+            .options(joinedload(EventComment.author).joinedload(User.profile))
             .filter_by(event_id=event_id)
             .order_by(EventComment.created_at)
             .all()
@@ -304,6 +300,18 @@ class FriendRepository(SQLAlchemyRepository):
             .all()
         )
 
+    def get_pending_sent(self, user_id):
+        """Demandes en attente envoyées par user_id (il est l'expéditeur)."""
+        return (
+            Friend.query
+            .options(joinedload(Friend.user1), joinedload(Friend.user2))
+            .filter(
+                Friend.status == 'pending',
+                Friend.requester_id == user_id,
+            )
+            .all()
+        )
+
 
 # =============================================================================
 # FAVORITE GAMES
@@ -338,15 +346,57 @@ class PostRepository(SQLAlchemyRepository):
     def __init__(self):
         super().__init__(Post)
 
-    def get_recent(self, limit=20):
+    def get_recent(self, limit=20, offset=0):
         """Retourne les posts les plus récents pour le fil d'actualité."""
         return (
             Post.query
-            .options(joinedload(Post.author))
+            .options(
+                joinedload(Post.author).joinedload(User.profile)
+            )
             .order_by(Post.created_at.desc())
+            .offset(offset)
             .limit(limit)
             .all()
         )
+
+    def get_by_id(self, post_id):
+        return Post.query.filter_by(id=post_id).first()
+
+
+# =============================================================================
+# POST LIKES
+# =============================================================================
+
+class PostLikeRepository(SQLAlchemyRepository):
+
+    def __init__(self):
+        super().__init__(PostLike)
+
+    def get(self, user_id, post_id):
+        return PostLike.query.filter_by(user_id=user_id, post_id=post_id).first()
+
+
+# =============================================================================
+# POST COMMENTS
+# =============================================================================
+
+class PostCommentRepository(SQLAlchemyRepository):
+
+    def __init__(self):
+        super().__init__(PostComment)
+
+    def get_by_post(self, post_id, limit=50):
+        return (
+            PostComment.query
+            .options(joinedload(PostComment.author).joinedload(User.profile))
+            .filter_by(post_id=post_id)
+            .order_by(PostComment.created_at)
+            .limit(limit)
+            .all()
+        )
+
+    def get_by_id(self, comment_id):
+        return PostComment.query.filter_by(id=comment_id).first()
 
 
 # =============================================================================
@@ -358,8 +408,23 @@ class ReviewRepository(SQLAlchemyRepository):
     def __init__(self):
         super().__init__(Review)
 
+    def get_by_id(self, review_id):
+        return Review.query.filter_by(id=review_id).first()
+
     def get_by_event(self, event_id):
         return Review.query.filter_by(event_id=event_id).all()
 
     def get_by_reviewed_user(self, reviewed_user_id):
         return Review.query.filter_by(reviewed_user_id=reviewed_user_id).all()
+
+    def get_by_reviewer_and_event(self, reviewer_id, event_id):
+        """Vérifie si le reviewer a déjà noté cet événement."""
+        return Review.query.filter_by(
+            reviewer_id=reviewer_id, event_id=event_id
+        ).first()
+
+    def get_by_reviewer_and_user(self, reviewer_id, reviewed_user_id):
+        """Vérifie si le reviewer a déjà noté ce joueur."""
+        return Review.query.filter_by(
+            reviewer_id=reviewer_id, reviewed_user_id=reviewed_user_id
+        ).first()

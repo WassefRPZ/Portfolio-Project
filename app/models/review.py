@@ -20,6 +20,14 @@ class Review(db.Model):
     comment          = db.Column(db.Text)
     created_at       = db.Column(db.DateTime, default=datetime.utcnow)
 
+    __table_args__ = (
+        # Empêche de noter deux fois le même événement ou le même joueur.
+        # MySQL ignore les NULL dans les UNIQUE — la vérification applicative
+        # dans create_review() couvre les cas NULL.
+        db.UniqueConstraint('reviewer_id', 'event_id',         name='uq_review_event'),
+        db.UniqueConstraint('reviewer_id', 'reviewed_user_id', name='uq_review_user'),
+    )
+
     # Relations
     reviewer      = db.relationship('User',  foreign_keys=[reviewer_id],
                                     backref='reviews_written', lazy='select')

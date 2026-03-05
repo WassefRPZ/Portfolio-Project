@@ -7,4 +7,6 @@ from app.models.event_comment     import EventComment      # noqa: F401
 from app.models.friendship        import Friend            # noqa: F401
 from app.models.favorite_game     import FavoriteGame      # noqa: F401
 from app.models.post              import Post              # noqa: F401
+from app.models.post_like         import PostLike          # noqa: F401
+from app.models.post_comment      import PostComment       # noqa: F401
 from app.models.review            import Review            # noqa: F401

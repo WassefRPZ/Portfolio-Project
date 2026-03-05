@@ -7,13 +7,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models import (
     User, Profile, Game, Event, EventParticipant,
-    EventComment, Friend, FavoriteGame, Post, Review
+    EventComment, Friend, FavoriteGame, Post, PostLike, PostComment, Review
 )
 from app.persistence.repository import (
     UserRepository, ProfileRepository, GameRepository, EventRepository,
     EventParticipantRepository, EventCommentRepository,
     FriendRepository, FavoriteGameRepository,
-    PostRepository, ReviewRepository,
+    PostRepository, PostLikeRepository, PostCommentRepository, ReviewRepository,
 )
 
 
@@ -32,6 +32,8 @@ class BoardGameFacade:
         self.friends      = FriendRepository()
         self.favorites    = FavoriteGameRepository()
         self.posts        = PostRepository()
+        self.post_likes   = PostLikeRepository()
+        self.post_comments = PostCommentRepository()
         self.reviews      = ReviewRepository()
 
     # ==========================================
@@ -87,70 +89,6 @@ class BoardGameFacade:
         }, None
 
     # ==========================================
-    # BOARDGAMEGEEK (interne)
-    # ==========================================
-
-    def _fetch_bgg_game(self, bgg_id):
-        """Appelle BoardGameGeek XML API 2 pour récupérer les données d'un jeu par son ID.
-        Retourne (dict, None) en succès ou (None, "message d'erreur") en échec.
-        """
-        import xml.etree.ElementTree as ET
-
-        try:
-            response = requests.get(
-                'https://boardgamegeek.com/xmlapi2/thing',
-                params={'id': bgg_id, 'stats': 1},
-                timeout=10,
-            )
-            response.raise_for_status()
-        except requests.exceptions.Timeout:
-            return None, "Délai dépassé lors de la requête à BoardGameGeek"
-        except requests.exceptions.RequestException:
-            return None, "Erreur réseau lors de la requête à BoardGameGeek"
-
-        try:
-            root = ET.fromstring(response.text)
-        except ET.ParseError:
-            return None, "Réponse invalide de BoardGameGeek"
-
-        item = root.find('item')
-        if item is None:
-            return None, f"Jeu introuvable sur BoardGameGeek : ID '{bgg_id}'"
-
-        name_el = item.find("name[@type='primary']")
-        name = name_el.get('value', '') if name_el is not None else ''
-
-        desc_el = item.find('description')
-        description = (desc_el.text or '') if desc_el is not None else ''
-
-        min_el = item.find('minplayers')
-        max_el = item.find('maxplayers')
-        min_players = max(int(min_el.get('value', 1)), 1) if min_el is not None else 1
-        max_players = max(int(max_el.get('value', 1)), 1) if max_el is not None else 1
-
-        time_el = item.find('playingtime')
-        play_time = int(time_el.get('value', 30)) if time_el is not None else 30
-        if play_time == 0:
-            play_time = 30
-
-        img_el = item.find('image')
-        image_url = ''
-        if img_el is not None and img_el.text:
-            image_url = img_el.text.strip()
-            if image_url.startswith('//'):
-                image_url = 'https:' + image_url
-
-        return {
-            'id_api':            str(bgg_id),
-            'name':              name,
-            'description':       description,
-            'min_players':       min_players,
-            'max_players':       max_players,
-            'play_time_minutes': play_time,
-            'image_url':         image_url,
-        }, None
-
-    # ==========================================
     # CLOUDINARY (interne)
     # ==========================================
 
@@ -186,6 +124,14 @@ class BoardGameFacade:
 
         if len(data['password']) < 8:
             return None, "Le mot de passe doit contenir au minimum 8 caractères"
+        if not re.search(r'[A-Z]', data['password']):
+            return None, "Le mot de passe doit contenir au moins une lettre majuscule"
+        if not re.search(r'[a-z]', data['password']):
+            return None, "Le mot de passe doit contenir au moins une lettre minuscule"
+        if not re.search(r'\d', data['password']):
+            return None, "Le mot de passe doit contenir au moins un chiffre"
+        if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?`~]', data['password']):
+            return None, "Le mot de passe doit contenir au moins un caractère spécial (!@#$%^&*…)"
 
         if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', data['email']):
             return None, "Format d'email invalide"
@@ -280,7 +226,7 @@ class BoardGameFacade:
 
     def global_search(self, query):
         """Recherche simultanée dans les utilisateurs (username) et les événements ouverts (title/description)."""
-        users  = [u.to_dict() for u in self.users.search(query)]
+        users  = [u.to_public_dict() for u in self.users.search(query)]
         events = [e.to_dict() for e in self.events.search(query)]
         return {"users": users, "events": events}
 
@@ -465,13 +411,7 @@ class BoardGameFacade:
 
     def get_event_comments(self, event_id):
         comments = self.comments.get_by_event(event_id)
-        result = []
-        for comment in comments:
-            comment_data = comment.to_dict()
-            if comment.author and comment.author.profile:
-                comment_data['username'] = comment.author.profile.username
-            result.append(comment_data)
-        return result
+        return [comment.to_dict() for comment in comments]
 
     def add_comment(self, event_id, user_id, content):
         comment = EventComment(
@@ -480,10 +420,7 @@ class BoardGameFacade:
             content=content,
         )
         self.comments.save(comment)
-        comment_data = comment.to_dict()
-        if comment.author and comment.author.profile:
-            comment_data['username'] = comment.author.profile.username
-        return comment_data, None
+        return comment.to_dict(), None
 
     # ==========================================
     # AMIS
@@ -510,6 +447,19 @@ class BoardGameFacade:
                 })
         return result
 
+    def get_sent_requests(self, user_id):
+        """Demandes envoyées par user_id encore en attente."""
+        sent = self.friends.get_pending_sent(user_id)
+        result = []
+        for f in sent:
+            receiver = f.user2 if f.user_id_1 == user_id else f.user1
+            if receiver:
+                result.append({
+                    "friendship": f.to_dict(),
+                    "receiver":   receiver.to_public_dict(),
+                })
+        return result
+
     def add_friend(self, requester_id, receiver_id):
         if requester_id == receiver_id:
             return None, "Vous ne pouvez pas vous ajouter vous-même"
@@ -532,11 +482,17 @@ class BoardGameFacade:
         return friendship.to_dict(), None
 
     def accept_friend(self, current_user_id, requester_id):
+        if current_user_id == requester_id:
+            return None, "Vous ne pouvez pas accepter votre propre demande"
+
         user_id_1, user_id_2 = sorted([current_user_id, requester_id])
         friendship = self.friends.get_with_status(user_id_1, user_id_2, 'pending')
 
         if not friendship:
             return None, "Demande introuvable"
+
+        if friendship.requester_id == current_user_id:
+            return None, "Vous ne pouvez pas accepter votre propre demande"
 
         friendship.status = 'accepted'
         self.friends.commit()
@@ -570,14 +526,15 @@ class BoardGameFacade:
         return [g.to_dict() for g in self.favorites.get_games_for_user(user_id)]
 
     def add_favorite_game(self, user_id, game_id):
-        if not self.games.get_by_id(game_id):
+        game = self.games.get_by_id(game_id)
+        if not game:
             return None, "Jeu introuvable"
         if self.favorites.get(user_id, game_id):
             return None, "Jeu déjà dans vos favoris"
 
         favorite = FavoriteGame(user_id=user_id, game_id=game_id)
         self.favorites.save(favorite)
-        return favorite.to_dict(), None
+        return game.to_dict(), None
 
     def remove_favorite_game(self, user_id, game_id):
         favorite = self.favorites.get(user_id, game_id)
@@ -591,13 +548,120 @@ class BoardGameFacade:
     # PUBLICATIONS
     # ==========================================
 
-    def create_post(self, author_id, content):
-        if not content or not content.strip():
-            return None, "Le contenu ne peut pas être vide"
+    def create_post(self, author_id, content=None, image_file=None, post_type='text'):
+        VALID_TYPES = ('text', 'image', 'news')
+        if post_type not in VALID_TYPES:
+            return None, f"Type de post invalide. Valeurs acceptées : {', '.join(VALID_TYPES)}"
 
-        post = Post(author_id=author_id, content=content.strip())
+        image_url = None
+        if image_file:
+            image_url, error = self._upload_to_cloudinary(image_file, folder='posts')
+            if error:
+                return None, error
+
+        content = content.strip() if content else None
+
+        if not content and not image_url:
+            return None, "Un post doit contenir au moins un texte ou une image"
+
+        post = Post(
+            author_id=author_id,
+            post_type=post_type,
+            content=content,
+            image_url=image_url,
+        )
         self.posts.save(post)
         return post.to_dict(), None
+
+    def get_feed(self, limit=20, offset=0, current_user_id=None):
+        posts = self.posts.get_recent(limit=limit, offset=offset)
+        return [p.to_dict(liked_by_user_id=current_user_id) for p in posts]
+
+    def like_post(self, user_id, post_id):
+        post = self.posts.get_by_id(post_id)
+        if not post:
+            return None, "Post introuvable"
+        if self.post_likes.get(user_id, post_id):
+            return None, "Vous avez déjà liké ce post"
+        like = PostLike(user_id=user_id, post_id=post_id)
+        self.post_likes.save(like)
+        return {"likes_count": post.likes.count()}, None
+
+    def unlike_post(self, user_id, post_id):
+        like = self.post_likes.get(user_id, post_id)
+        if not like:
+            return None, "Vous n'avez pas liké ce post"
+        self.post_likes.delete(like)
+        post = self.posts.get_by_id(post_id)
+        return {"likes_count": post.likes.count()}, None
+
+    def add_post_comment(self, user_id, post_id, content):
+        if not content or not content.strip():
+            return None, "Le commentaire ne peut pas être vide"
+        if not self.posts.get_by_id(post_id):
+            return None, "Post introuvable"
+        comment = PostComment(
+            post_id=post_id,
+            user_id=user_id,
+            content=content.strip(),
+        )
+        self.post_comments.save(comment)
+        return comment.to_dict(), None
+
+    def get_post_comments(self, post_id):
+        if not self.posts.get_by_id(post_id):
+            return None, "Post introuvable"
+        return [c.to_dict() for c in self.post_comments.get_by_post(post_id)], None
+
+    def delete_post_comment(self, comment_id, user_id):
+        comment = self.post_comments.get_by_id(comment_id)
+        if not comment:
+            return None, "Commentaire introuvable"
+        if comment.user_id != user_id:
+            return None, "Vous ne pouvez supprimer que vos propres commentaires"
+        self.post_comments.delete(comment)
+        return {"success": True}, None
+
+    def kick_participant(self, event_id, user_id_to_kick):
+        event = self.events.get_by_id(event_id)
+        if not event:
+            return None, "Événement introuvable"
+
+        participation = self.participants.get_any(event_id, user_id_to_kick)
+        if not participation:
+            return None, "Ce joueur ne participe pas à cet événement"
+
+        db.session.delete(participation)
+        if event.status == 'full':
+            event.status = 'open'
+        db.session.commit()
+        return {"success": True}, None
+
+    def close_event(self, event_id):
+        event = self.events.get_by_id(event_id)
+        if not event:
+            return None, "Événement introuvable"
+        if event.status == 'cancelled':
+            return None, "Impossible de fermer un événement annulé"
+        if event.status == 'completed':
+            return None, "Cet événement est déjà terminé"
+
+        event.status = 'completed'
+        self.events.commit()
+        return event.to_dict(), None
+
+    def open_event(self, event_id):
+        event = self.events.get_by_id(event_id)
+        if not event:
+            return None, "Événement introuvable"
+        if event.status == 'cancelled':
+            return None, "Impossible de rouvrir un événement annulé"
+        if event.status == 'open':
+            return None, "Cet événement est déjà ouvert"
+
+        event.status = 'open'
+        self.events.commit()
+        return event.to_dict(), None
 
     def delete_post(self, post_id, user_id):
         post = Post.query.filter_by(id=post_id).first()
@@ -635,12 +699,16 @@ class BoardGameFacade:
         if event_id:
             if not self.events.get_by_id(event_id):
                 return None, "Événement introuvable"
+            if self.reviews.get_by_reviewer_and_event(reviewer_id, event_id):
+                return None, "Vous avez déjà noté cet événement"
 
         if reviewed_user_id:
             if reviewed_user_id == reviewer_id:
                 return None, "Vous ne pouvez pas vous noter vous-même"
             if not self.users.get_by_id(reviewed_user_id):
                 return None, "Utilisateur introuvable"
+            if self.reviews.get_by_reviewer_and_user(reviewer_id, reviewed_user_id):
+                return None, "Vous avez déjà noté ce joueur"
 
         review = Review(
             reviewer_id=reviewer_id,
@@ -666,6 +734,15 @@ class BoardGameFacade:
         reviews = self.reviews.get_by_event(event_id)
         return [r.to_dict() for r in reviews], None
 
+    def delete_review(self, review_id, user_id):
+        review = self.reviews.get_by_id(review_id)
+        if not review:
+            return None, "Avis introuvable"
+        if review.reviewer_id != user_id:
+            return None, "Vous ne pouvez supprimer que vos propres avis"
+        self.reviews.delete(review)
+        return {"success": True}, None
+
     # ==========================================
     # JEUX
     # ==========================================
@@ -675,13 +752,6 @@ class BoardGameFacade:
 
     def get_game(self, game_id):
         game = self.games.get_by_id(game_id)
-        return game.to_dict() if game else None
-
-    def get_game_by_name(self, name):
-        return self.games.get_by_name(name)
-
-    def get_game_by_api_id(self, id_api):
-        game = self.games.get_by_api_id(id_api)
         return game.to_dict() if game else None
 
     def search_games(self, query):
@@ -696,43 +766,20 @@ class BoardGameFacade:
         return popular
 
     def create_game(self, data):
-        id_api = str(data.get('id_api', '')).strip()
-        if not id_api:
-            return None, "Le champ 'id_api' est requis"
+        for field in ['name', 'min_players', 'max_players', 'play_time_minutes']:
+            if data.get(field) is None:
+                return None, f"Le champ '{field}' est requis"
 
-        # Éviter les doublons en base
-        if self.games.get_by_api_id(id_api):
-            return None, "Ce jeu existe déjà en base (id_api déjà présent)"
-
-        # Si les champs manuels sont fournis, les utiliser directement (fallback BGG)
-        manual_required = ['name', 'min_players', 'max_players', 'play_time_minutes']
-        if all(data.get(f) is not None for f in manual_required):
-            game_data = {
-                'id_api':            id_api,
-                'name':              data['name'],
-                'description':       data.get('description', ''),
-                'min_players':       int(data['min_players']),
-                'max_players':       int(data['max_players']),
-                'play_time_minutes': int(data['play_time_minutes']),
-                'image_url':         data.get('image_url', ''),
-            }
-        else:
-            # Récupérer les données depuis BoardGameGeek
-            game_data, error = self._fetch_bgg_game(id_api)
-            if error:
-                return None, (
-                    f"{error}. Vous pouvez aussi fournir les données manuellement "
-                    f"(name, min_players, max_players, play_time_minutes)."
-                )
+        if self.games.get_by_name(data['name']):
+            return None, "Un jeu avec ce nom existe déjà"
 
         game = Game(
-            id_api=game_data['id_api'],
-            name=game_data['name'],
-            description=game_data['description'],
-            min_players=game_data['min_players'],
-            max_players=game_data['max_players'],
-            play_time_minutes=game_data['play_time_minutes'],
-            image_url=game_data['image_url'],
+            name=data['name'],
+            description=data.get('description', ''),
+            min_players=int(data['min_players']),
+            max_players=int(data['max_players']),
+            play_time_minutes=int(data['play_time_minutes']),
+            image_url=data.get('image_url', ''),
         )
         self.games.save(game)
         return game.to_dict(), None
@@ -748,7 +795,7 @@ class BoardGameFacade:
             return None, "min_players ne peut pas dépasser max_players"
 
         for field in ['name', 'description', 'min_players', 'max_players',
-                      'play_time_minutes', 'image_url', 'id_api']:
+                      'play_time_minutes', 'image_url']:
             if field in data:
                 setattr(game, field, data[field])
 
