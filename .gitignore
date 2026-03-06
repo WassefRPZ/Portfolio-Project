@@ -5,6 +5,7 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 build/
 dist/
@@ -15,5 +16,7 @@ dist/
 *.swp
 *.log
 instance/
+app/static/
+tests/
 test_manuel_complet.py
 test_api_externes.py
