@@ -1,44 +1,12 @@
 from flask import request, jsonify
+from flask_jwt_extended import jwt_required
 from app.api.v1 import api_v1
 from app.services import facade
 
 
-# -----------------------------------------------
-# GET /search?q=... → recherche globale (utilisateurs + événements)
-# -----------------------------------------------
 @api_v1.route('/search', methods=['GET'])
+@jwt_required()
 def global_search():
-    """
-    Global search across users and events
-    ---
-    tags:
-      - Search
-    parameters:
-      - name: q
-        in: query
-        type: string
-        required: true
-        description: "Mot-clé à rechercher (username pour les joueurs, titre/description pour les événements)"
-    responses:
-      200:
-        description: Résultats de la recherche
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-            data:
-              type: object
-              properties:
-                users:
-                  type: array
-                  description: Joueurs dont le username correspond
-                events:
-                  type: array
-                  description: Événements ouverts dont le titre ou la description correspond
-      400:
-        description: Paramètre q manquant
-    """
     query = request.args.get('q', '').strip()
 
     if not query:

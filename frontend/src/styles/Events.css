@@ -227,3 +227,17 @@
 .btn-outline:hover {
   background: #f4f1ea;
 }
+
+/* Event card badge */
+.event-card__badge {
+  font-size: 13px;
+  color: #999;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Cancelled pill */
+.status-pill--cancelled {
+  background: #ffebee;
+  color: #c62828;
+}

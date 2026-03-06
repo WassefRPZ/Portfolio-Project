@@ -5,58 +5,9 @@ from app.services import facade
 from app import limiter
 
 
-# -----------------------------------------------
-# POST /auth/register
-# Body: { username, email, password, city, region?, bio? }
-# -----------------------------------------------
 @api_v1.route('/auth/register', methods=['POST'])
+@limiter.limit("5 per minute")
 def register():
-    """
-Register a new user
----
-tags:
-  - Auth
-consumes:
-  - application/json
-parameters:
-  - in: body
-    name: body
-    required: true
-    schema:
-      type: object
-      required:
-        - username
-        - email
-        - password
-        - city
-      properties:
-        username:
-          type: string
-          example: nina
-        email:
-          type: string
-          example: nina@test.com
-        password:
-          type: string
-          description: >
-            Minimum 8 caractères, doit contenir :
-            une majuscule, une minuscule, un chiffre et un caractère spécial (!@#$%^&*…)
-          example: MonMot@passe1
-        city:
-          type: string
-          example: Paris
-        region:
-          type: string
-          example: Île-de-France
-        bio:
-          type: string
-          example: Passionnée de jeux de société
-responses:
-  201:
-    description: User registered
-  400:
-    description: Invalid input
-"""
     data = request.get_json(silent=True)
 
     if not data:
@@ -84,40 +35,9 @@ responses:
     }), 201
 
 
-# -----------------------------------------------
-# POST /auth/login
-# Body: { email, password }
-# -----------------------------------------------
 @api_v1.route('/auth/login', methods=['POST'])
 @limiter.limit("5 per minute")
 def login():
-    """
-    Login user
-    ---
-    tags:
-      - Auth
-    consumes:
-      - application/json
-    parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: object
-          required:
-            - email
-            - password
-          properties:
-            email:
-              type: string
-            password:
-              type: string
-    responses:
-      200:
-        description: Login successful
-      401:
-        description: Invalid credentials
-    """
     data = request.get_json(silent=True)
 
     if not data:

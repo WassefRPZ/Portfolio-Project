@@ -3,13 +3,6 @@ from app import db
 
 
 class Event(db.Model):
-    """
-    Événement de jeu de société organisé par un utilisateur.
-    Un événement est lié à un jeu et se tient dans une ville.
-    Statuts possibles : open → full → cancelled / completed.
-    city / region / location_text : données issues de OpenCage Geocoding API.
-    """
-
     __tablename__ = 'events'
 
     id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -18,7 +11,7 @@ class Event(db.Model):
     title         = db.Column(db.String(200), nullable=False)
     description   = db.Column(db.Text)
     city          = db.Column(db.String(100), nullable=False)
-    region        = db.Column(db.String(100), default='')
+    region        = db.Column(db.String(100), nullable=True, default=None)
     location_text = db.Column(db.String(255), nullable=False)
     date_time     = db.Column(db.DateTime,    nullable=False)
     max_players   = db.Column(db.Integer,     nullable=False)
@@ -27,8 +20,8 @@ class Event(db.Model):
         default='open'
     )
     cover_url     = db.Column(db.String(255))    
-    latitude      = db.Column(db.Float)                # latitude  (OpenCage Geocoding)
-    longitude     = db.Column(db.Float)                # longitude (OpenCage Geocoding)
+    latitude      = db.Column(db.Float)
+    longitude     = db.Column(db.Float)
     created_at    = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     creator      = db.relationship('User',             foreign_keys=[creator_id],
@@ -41,7 +34,6 @@ class Event(db.Model):
                                      lazy='select', cascade='all, delete-orphan')
 
     def to_dict(self, include_participants=False):
-        """Sérialise l'événement. include_participants=True ajoute la liste des inscrits."""
         confirmed = [p for p in self.participants if p.status == 'confirmed']
 
         data = {

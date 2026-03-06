@@ -2,8 +2,6 @@ from app import db
 
 
 class Game(db.Model):
-    """Jeu de société disponible dans le catalogue BoardGame Hub."""
-
     __tablename__ = 'games'
 
     id              = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -15,7 +13,6 @@ class Game(db.Model):
     image_url       = db.Column(db.String(255))
 
     def to_dict(self):
-        """Sérialise le jeu en dictionnaire JSON-compatible."""
         return {
             "id":               self.id,
             "name":             self.name,

@@ -3,14 +3,6 @@ from app import db
 
 
 class Friend(db.Model):
-    """
-    Relation d'amitié entre deux utilisateurs.
-    Convention : user_id_1 < user_id_2 (enforcer côté applicatif)
-    pour éviter les doublons (A,B) et (B,A).
-    requester_id : ID réel de l'expéditeur (indépendant du tri).
-    Statuts : pending → accepted. Refus = suppression de la ligne.
-    """
-
     __tablename__ = 'friends'
 
     id           = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -29,7 +21,6 @@ class Friend(db.Model):
     requester = db.relationship('User', foreign_keys=[requester_id], lazy='select')
 
     def to_dict(self):
-        """Sérialise la relation d'amitié en dictionnaire JSON-compatible."""
         return {
             "id":           self.id,
             "user_id_1":    self.user_id_1,

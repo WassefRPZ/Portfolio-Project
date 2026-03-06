@@ -1,6 +1,26 @@
-import { useMemo, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { getEvents, joinEvent, leaveEvent } from "../api/events";
 import "../styles/Events.css";
+
+/* ── helpers ── */
+
+function parseDate(iso) {
+  if (!iso) return { month: "—", day: "--" };
+  const d = new Date(iso);
+  const month = d.toLocaleString("en-US", { month: "short" }).toUpperCase();
+  const day = String(d.getDate()).padStart(2, "0");
+  return { month, day };
+}
+
+function formatTime(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function DateBadge({ month, day }) {
   return (
@@ -13,9 +33,7 @@ function DateBadge({ month, day }) {
 
 function StatusPill({ variant, children }) {
   return (
-    <span className={`status-pill status-pill--${variant}`}>
-      {children}
-    </span>
+    <span className={`status-pill status-pill--${variant}`}>{children}</span>
   );
 }
 
@@ -28,66 +46,94 @@ function IconText({ icon, children }) {
   );
 }
 
+/* ── page ── */
+
 export default function Events() {
+  const { token, user } = useAuth();
   const navigate = useNavigate();
+
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [actionLoading, setActionLoading] = useState(null);
 
-  const events = useMemo(
-    () => [
-      {
-        id: 1,
-        month: "JAN",
-        day: "08",
-        title: "D&D Campaign - Session 12",
-        host: "Alice Martinez",
-        time: "7:00 PM",
-        location: "Gaming Knights Club",
-        players: "6/6 players",
-        status: "confirmed",
-        canJoin: false,
-      },
-      {
-        id: 2,
-        month: "JAN",
-        day: "10",
-        title: "Catan Tournament Finals",
-        host: "Ben Kim",
-        time: "6:30 PM",
-        location: "Board Game Café",
-        players: "12/16 players",
-        status: "spots",
-        canJoin: true,
-      },
-      {
-        id: 3,
-        month: "JAN",
-        day: "12",
-        title: "Board Game Night",
-        host: "Gaming Knights Club",
-        time: "5:00 PM",
-        location: "Community Center",
-        players: "8/20 players",
-        status: "spots",
-        canJoin: true,
-      },
-    ],
-    []
-  );
+  const fetchEvents = useCallback(async () => {
+    try {
+      const res = await getEvents(token);
+      setEvents(res.data || []);
+    } catch (err) {
+      console.error("Failed to load events:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  /* Join / leave handlers */
+  async function handleJoin(eventId) {
+    setActionLoading(eventId);
+    try {
+      await joinEvent(token, eventId);
+      await fetchEvents();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleLeave(eventId) {
+    setActionLoading(eventId);
+    try {
+      await leaveEvent(token, eventId);
+      await fetchEvents();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  /* Search filter (client-side on loaded events) */
   const filtered = events.filter((e) => {
-    const hay = `${e.title} ${e.host} ${e.location}`.toLowerCase();
+    if (!query.trim()) return true;
+    const hay = `${e.title} ${e.city} ${e.description}`.toLowerCase();
     return hay.includes(query.toLowerCase());
   });
 
+  /* Decide button state per event */
+  function getEventAction(event) {
+    const userId = user ? Number(user.id) : null;
+
+    if (event.creator_id === userId) return "owner";
+    if (event.status === "full") return "full";
+    if (event.status === "cancelled") return "cancelled";
+
+    // Check if current user is a participant
+    if (event.participants) {
+      const isParticipant = event.participants.some(
+        (p) => p.user_id === userId && p.status === "confirmed"
+      );
+      if (isParticipant) return "joined";
+    }
+
+    return "join";
+  }
+
+  if (loading) {
+    return <div className="events-page"><p style={{ padding: 24, color: "#999" }}>Loading events...</p></div>;
+  }
+
   return (
     <div className="events-page">
-      {/* Header row */}
+      {/* Header */}
       <div className="events-header">
         <h1>Events</h1>
-
         <button onClick={() => navigate("/create-event")} className="events-create-btn">
-          <span>＋</span>
-          Create Event
+          <span>＋</span> Create Event
         </button>
       </div>
 
@@ -105,54 +151,76 @@ export default function Events() {
 
       {/* List */}
       <div className="events-list">
-        {filtered.map((e) => (
-          <div key={e.id} className="event-card">
-            {/* Left content */}
-            <div className="event-card__left">
-              <DateBadge month={e.month} day={e.day} />
+        {filtered.map((event) => {
+          const { month, day } = parseDate(event.date_time);
+          const action = getEventAction(event);
+          const gameName = event.game?.name || "";
+          const isLoading = actionLoading === event.id;
 
-              <div className="event-card__info">
-                <div className="event-card__title">{e.title}</div>
-                <div className="event-card__host">
-                  Hosted by <strong>{e.host}</strong>
-                </div>
+          return (
+            <div key={event.id} className="event-card">
+              <div className="event-card__left">
+                <DateBadge month={month} day={day} />
 
-                <div className="event-card__meta">
-                  <IconText icon="🕒">{e.time}</IconText>
-                  <IconText icon="📍">{e.location}</IconText>
-                  <IconText icon="👥">{e.players}</IconText>
-                </div>
+                <div className="event-card__info">
+                  <div className="event-card__title">{event.title}</div>
+                  <div className="event-card__host">
+                    {gameName && <>{gameName} · </>}
+                    {event.city}
+                  </div>
 
-                <div className="event-card__status">
-                  {e.status === "confirmed" ? (
-                    <StatusPill variant="confirmed">Confirmed</StatusPill>
-                  ) : (
-                    <StatusPill variant="spots">Spots Available</StatusPill>
-                  )}
+                  <div className="event-card__meta">
+                    <IconText icon="🕒">{formatTime(event.date_time)}</IconText>
+                    <IconText icon="📍">{event.location_text}</IconText>
+                    <IconText icon="👥">
+                      {event.current_players}/{event.max_players} players
+                    </IconText>
+                  </div>
+
+                  <div className="event-card__status">
+                    {event.status === "full" ? (
+                      <StatusPill variant="confirmed">Full</StatusPill>
+                    ) : event.status === "cancelled" ? (
+                      <StatusPill variant="cancelled">Cancelled</StatusPill>
+                    ) : (
+                      <StatusPill variant="spots">Spots Available</StatusPill>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Right buttons */}
-            <div className="event-card__actions">
-              <button
-                onClick={() => alert("Details page later (MVP)")}
-                className="btn-brown"
-              >
-                View Details
-              </button>
+              <div className="event-card__actions">
+                {action === "join" && (
+                  <button
+                    onClick={() => handleJoin(event.id)}
+                    disabled={isLoading}
+                    className="btn-brown"
+                  >
+                    {isLoading ? "..." : "Join Event"}
+                  </button>
+                )}
 
-              {e.canJoin && (
-                <button
-                  onClick={() => alert("Join logic later (backend)")}
-                  className="btn-outline"
-                >
-                  Join Event
-                </button>
-              )}
+                {action === "joined" && (
+                  <button
+                    onClick={() => handleLeave(event.id)}
+                    disabled={isLoading}
+                    className="btn-outline"
+                  >
+                    {isLoading ? "..." : "Leave Event"}
+                  </button>
+                )}
+
+                {action === "owner" && (
+                  <span className="event-card__badge">Your event</span>
+                )}
+
+                {action === "full" && (
+                  <span className="event-card__badge">Event full</span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {filtered.length === 0 && (
           <div className="events-empty">No events found.</div>

@@ -53,10 +53,10 @@ export default function Home() {
       try {
         const [feedRes, eventsRes] = await Promise.all([
           getFeed(token),
-          getEvents(),
+          getEvents(token, { limit: 4 }),
         ]);
         setPosts(feedRes.data || []);
-        setEvents((eventsRes.data || []).slice(0, 4));
+        setEvents(eventsRes.data || []);
       } catch (err) {
         console.error("Home load error:", err);
       } finally {

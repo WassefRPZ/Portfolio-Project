@@ -17,7 +17,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # Cloudinary SDK configuration
+    # Cloudinary
     cloudinary.config(
         cloud_name  = app.config.get("CLOUDINARY_CLOUD_NAME"),
         api_key     = app.config.get("CLOUDINARY_API_KEY"),
@@ -80,7 +80,7 @@ def create_app():
 
     from app.models import (  # noqa: F401
         User, Profile, Game, Event, EventParticipant,
-        EventComment, Friend, FavoriteGame, Post, PostLike, PostComment, Review
+        EventComment, FavoriteGame, Friend, Post
     )
     with app.app_context():
         db.create_all()
@@ -90,15 +90,11 @@ def create_app():
         return {
             "message": "Board Game Meetup API",
             "version": "1.0.0",
-            "docs":    "/apidocs/",
+            "docs":    "/apidocs",
             "routes": {
                 "auth":    "/api/v1/auth",
                 "users":   "/api/v1/users",
                 "events":  "/api/v1/events",
-                "friends": "/api/v1/friends",
-                "games":   "/api/v1/games",
-                "posts":   "/api/v1/posts",
-                "reviews": "/api/v1/reviews",
                 "search":  "/api/v1/search",
             }
         }
