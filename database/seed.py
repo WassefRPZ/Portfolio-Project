@@ -1,7 +1,7 @@
 import sys
 import os
 
-# Permet d'exécuter ce script directement depuis le dossier database/
+# Permet d'executer ce script depuis le dossier database/
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from werkzeug.security import generate_password_hash
@@ -18,9 +18,6 @@ if not SEED_ADMIN_PASSWORD:
 
 with app.app_context():
 
-    # -----------------------------------------------------------------------
-    # ADMINS — création de User + Profile pour chaque compte administrateur
-    # -----------------------------------------------------------------------
     admins = [
         {"username": "WarrenAdmin", "email": "warren@hb.com", "city": "Paris"},
         {"username": "WassefAdmin", "email": "wassef@hb.com", "city": "Frejus"},
@@ -31,7 +28,6 @@ with app.app_context():
     for admin_data in admins:
         if not User.query.filter_by(email=admin_data["email"]).first():
 
-            # Compte d'authentification
             new_user = User(
                 email=admin_data["email"],
                 password_hash=generate_password_hash(SEED_ADMIN_PASSWORD),
@@ -40,7 +36,6 @@ with app.app_context():
             db.session.add(new_user)
             db.session.flush()
 
-            # Profil public associé
             new_profile = Profile(
                 user_id=new_user.id,
                 username=admin_data["username"],
@@ -53,9 +48,6 @@ with app.app_context():
         else:
             print(f"  Admin existe déjà : {admin_data['username']}")
 
-    # -----------------------------------------------------------------------
-    # JEUX
-    # -----------------------------------------------------------------------
     games_data = [
         {
             "name": "Catan",
