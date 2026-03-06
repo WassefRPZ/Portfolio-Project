@@ -3,8 +3,6 @@ from app import db
 
 
 class EventComment(db.Model):
-    """Commentaire laissé par un utilisateur sur un événement BoardGame Hub."""
-
     __tablename__ = 'event_comments'
 
     id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -13,12 +11,10 @@ class EventComment(db.Model):
     content    = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Relation vers l'auteur du commentaire
     author = db.relationship('User', foreign_keys=[user_id],
                              backref='event_comments_written', lazy='select')
 
     def to_dict(self):
-        """Sérialise le commentaire en dictionnaire JSON-compatible."""
         result = {
             "id":         self.id,
             "event_id":   self.event_id,
