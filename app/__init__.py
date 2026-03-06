@@ -47,7 +47,7 @@ def create_app():
 
     from app.models import (  # noqa: F401
         User, Profile, Game, Event, EventParticipant,
-        EventComment, FavoriteGame
+        EventComment, FavoriteGame, Friend, Post
     )
     with app.app_context():
         db.create_all()

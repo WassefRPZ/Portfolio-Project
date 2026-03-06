@@ -7,11 +7,12 @@ import cloudinary.uploader
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db
-from app.models import User, Profile, Event, EventParticipant, EventComment, FavoriteGame
+from app.models import User, Profile, Event, EventParticipant, EventComment, FavoriteGame, Friend, Post
 from app.persistence.repository import (
     UserRepository, ProfileRepository, GameRepository,
     EventRepository, EventParticipantRepository,
-    EventCommentRepository, FavoriteGameRepository,
+    EventCommentRepository, FavoriteGameRepository, FriendRepository,
+    PostRepository,
 )
 
 
@@ -25,6 +26,8 @@ class BoardGameFacade:
         self.participants = EventParticipantRepository()
         self.comments = EventCommentRepository()
         self.favorites = FavoriteGameRepository()
+        self.friends = FriendRepository()
+        self.posts = PostRepository()
 
     # ── Auth ──────────────────────────────────────────────────────────────
 
@@ -471,3 +474,169 @@ class BoardGameFacade:
         found_users  = [u.to_public_dict() for u in self.users.search(query)]
         found_events = [e.to_dict() for e in self.events.search(query)]
         return {"users": found_users, "events": found_events}
+
+    # ── Posts ──────────────────────────────────────────────────────────────
+
+    def create_post(self, author_id, data, image_file=None):
+        content = (data.get('content') or '').strip()
+        post_type = data.get('post_type', 'text')
+
+        if post_type not in ('text', 'image', 'news'):
+            return None, "Type de post invalide (text, image, news)"
+
+        image_url = None
+        if image_file:
+            image_url, err = self._upload_to_cloudinary(image_file)
+            if err:
+                return None, err
+            if not post_type or post_type == 'text':
+                post_type = 'image'
+
+        if not content and not image_url:
+            return None, "Le post doit contenir du texte ou une image"
+
+        post = Post(
+            author_id=author_id,
+            post_type=post_type,
+            content=content or None,
+            image_url=image_url,
+        )
+        self.posts.save(post)
+        return post.to_dict(), None
+
+    def get_post(self, post_id):
+        post = self.posts.get_by_id(post_id)
+        if not post:
+            return None, "Post introuvable"
+        return post.to_dict(), None
+
+    def update_post(self, current_user_id, post_id, data):
+        post = self.posts.get_by_id(post_id)
+        if not post:
+            return None, "Post introuvable"
+        if post.author_id != current_user_id:
+            return None, "forbidden"
+
+        content = data.get('content')
+        if content is not None:
+            content = content.strip()
+            if not content and not post.image_url:
+                return None, "Le post doit contenir du texte ou une image"
+            post.content = content or None
+
+        self.posts.commit()
+        return post.to_dict(), None
+
+    def delete_post(self, current_user_id, post_id):
+        post = self.posts.get_by_id(post_id)
+        if not post:
+            return None, "Post introuvable"
+        if post.author_id != current_user_id:
+            return None, "forbidden"
+
+        self.posts.delete(post)
+        return {"success": True}, None
+
+    def list_posts(self, limit=50, offset=0):
+        posts, total = self.posts.get_all(limit=limit, offset=offset)
+        return [p.to_dict() for p in posts], total
+
+    def list_user_posts(self, user_id, limit=50, offset=0):
+        posts, total = self.posts.get_by_author(user_id, limit=limit, offset=offset)
+        return [p.to_dict() for p in posts], total
+
+    # ── Friends ───────────────────────────────────────────────────────────
+
+    def send_friend_request(self, requester_id, receiver_id):
+        if requester_id == receiver_id:
+            return None, "Impossible de s'ajouter soi-même en ami"
+
+        if not self.users.get_by_id(receiver_id):
+            return None, "Utilisateur introuvable"
+
+        existing = self.friends.get_friendship(requester_id, receiver_id)
+        if existing:
+            if existing.status == 'accepted':
+                return None, "Vous êtes déjà amis"
+            return None, "Une demande d'ami est déjà en cours"
+
+        u1, u2 = min(requester_id, receiver_id), max(requester_id, receiver_id)
+        friendship = Friend(
+            user_id_1=u1,
+            user_id_2=u2,
+            requester_id=requester_id,
+        )
+        self.friends.save(friendship)
+        return friendship.to_dict(), None
+
+    def accept_friend_request(self, current_user_id, requester_id):
+        friendship = self.friends.get_friendship(current_user_id, requester_id)
+        if not friendship:
+            return None, "Aucune demande d'ami trouvée"
+
+        if friendship.status == 'accepted':
+            return None, "Vous êtes déjà amis"
+
+        if friendship.requester_id == current_user_id:
+            return None, "Vous ne pouvez pas accepter votre propre demande"
+
+        friendship.status = 'accepted'
+        self.friends.commit()
+        return friendship.to_dict(), None
+
+    def reject_friend_request(self, current_user_id, requester_id):
+        friendship = self.friends.get_friendship(current_user_id, requester_id)
+        if not friendship:
+            return None, "Aucune demande d'ami trouvée"
+
+        if friendship.status == 'accepted':
+            return None, "Vous êtes déjà amis, utilisez supprimer"
+
+        if friendship.requester_id == current_user_id:
+            return None, "Vous ne pouvez pas refuser votre propre demande"
+
+        self.friends.delete(friendship)
+        return {"success": True}, None
+
+    def remove_friend(self, current_user_id, other_user_id):
+        friendship = self.friends.get_friendship(current_user_id, other_user_id)
+        if not friendship:
+            return None, "Aucune relation d'amitié trouvée"
+
+        self.friends.delete(friendship)
+        return {"success": True}, None
+
+    def get_friends_list(self, user_id):
+        friendships = self.friends.get_friends(user_id)
+        result = []
+        for f in friendships:
+            friend_id = f.user_id_2 if f.user_id_1 == user_id else f.user_id_1
+            user = self.users.get_by_id(friend_id)
+            if user:
+                result.append(user.to_public_dict())
+        return result
+
+    def get_pending_requests(self, user_id):
+        received = self.friends.get_pending_received(user_id)
+        result = []
+        for f in received:
+            user = self.users.get_by_id(f.requester_id)
+            if user:
+                entry = user.to_public_dict()
+                entry['friendship_id'] = f.id
+                entry['requested_at'] = f.created_at.isoformat() if f.created_at else None
+                result.append(entry)
+        return result
+
+    def get_sent_requests(self, user_id):
+        sent = self.friends.get_pending_sent(user_id)
+        result = []
+        for f in sent:
+            other_id = f.user_id_2 if f.user_id_1 == user_id else f.user_id_1
+            user = self.users.get_by_id(other_id)
+            if user:
+                entry = user.to_public_dict()
+                entry['friendship_id'] = f.id
+                entry['requested_at'] = f.created_at.isoformat() if f.created_at else None
+                result.append(entry)
+        return result

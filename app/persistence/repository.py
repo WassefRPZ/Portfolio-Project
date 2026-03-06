@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 from app import db
 from app.models import (
     User, Profile, Game, Event, EventParticipant,
-    EventComment, FavoriteGame
+    EventComment, FavoriteGame, Friend, Post
 )
 
 
@@ -206,6 +206,81 @@ class FavoriteGameRepository(SQLAlchemyRepository):
             .filter(FavoriteGame.user_id == user_id)
             .all()
         )
+
+
+
+class FriendRepository(SQLAlchemyRepository):
+
+    def _sorted_ids(self, a, b):
+        return (min(a, b), max(a, b))
+
+    def get_friendship(self, user_a, user_b):
+        u1, u2 = self._sorted_ids(user_a, user_b)
+        return Friend.query.filter_by(user_id_1=u1, user_id_2=u2).first()
+
+    def get_friends(self, user_id):
+        return (
+            Friend.query
+            .filter(
+                Friend.status == 'accepted',
+                db.or_(
+                    Friend.user_id_1 == user_id,
+                    Friend.user_id_2 == user_id,
+                )
+            )
+            .all()
+        )
+
+    def get_pending_received(self, user_id):
+        return (
+            Friend.query
+            .filter(
+                Friend.status == 'pending',
+                Friend.requester_id != user_id,
+                db.or_(
+                    Friend.user_id_1 == user_id,
+                    Friend.user_id_2 == user_id,
+                )
+            )
+            .all()
+        )
+
+    def get_pending_sent(self, user_id):
+        return (
+            Friend.query
+            .filter(
+                Friend.status == 'pending',
+                Friend.requester_id == user_id,
+            )
+            .all()
+        )
+
+
+class PostRepository(SQLAlchemyRepository):
+
+    def get_by_id(self, post_id):
+        return db.session.get(Post, post_id)
+
+    def get_all(self, limit=50, offset=0):
+        total = Post.query.count()
+        posts = (
+            Post.query
+            .order_by(Post.created_at.desc())
+            .offset(offset).limit(limit)
+            .all()
+        )
+        return posts, total
+
+    def get_by_author(self, author_id, limit=50, offset=0):
+        total = Post.query.filter_by(author_id=author_id).count()
+        posts = (
+            Post.query
+            .filter_by(author_id=author_id)
+            .order_by(Post.created_at.desc())
+            .offset(offset).limit(limit)
+            .all()
+        )
+        return posts, total
 
 
 

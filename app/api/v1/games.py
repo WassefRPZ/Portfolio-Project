@@ -1,11 +1,9 @@
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
 from app.api.v1 import api_v1
 from app.services import facade
 
 
 @api_v1.route('/games', methods=['GET'])
-@jwt_required()
 def list_games():
     try:
         limit = min(int(request.args.get('limit', 50)), 100)
@@ -18,7 +16,6 @@ def list_games():
 
 
 @api_v1.route('/games/search', methods=['GET'])
-@jwt_required()
 def search_games():
     query = request.args.get('q', '').strip()
 
