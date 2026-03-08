@@ -28,10 +28,9 @@ export default function Login() {
   return (
     <div className="auth-page">
 
-      {/* LEFT SIDE */}
       <div className="auth-left">
         <div className="auth-brand">
-          <h1>🎲 BoardGame</h1>
+          <h1>BoardGame Hub</h1>
           <p>Welcome back! Please enter your details to sign in</p>
         </div>
 
@@ -78,7 +77,6 @@ export default function Login() {
         </form>
       </div>
 
-      {/* RIGHT SIDE */}
       <div className="auth-right">
         <D20Fantasy />
         <h2>Join the Adventure</h2>

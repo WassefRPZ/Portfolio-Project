@@ -19,6 +19,7 @@ export default function CreateEvent() {
   const [dateTime, setDateTime] = useState("");
   const [maxPlayers, setMaxPlayers] = useState("");
   const [description, setDescription] = useState("");
+  const [coverFile, setCoverFile] = useState(null);
 
   useEffect(() => {
     async function loadGames() {
@@ -43,14 +44,16 @@ export default function CreateEvent() {
 
     setLoading(true);
     try {
-      await createEvent(token, {
-        title: title.trim(),
-        game_id: Number(gameId),
-        location_text: location.trim(),
-        date_time: dateTime,
-        max_players: Number(maxPlayers),
-        description: description.trim(),
-      });
+      const formData = new FormData();
+      formData.append("title", title.trim());
+      formData.append("game_id", Number(gameId));
+      formData.append("location_text", location.trim());
+      formData.append("date_time", dateTime);
+      formData.append("max_players", Number(maxPlayers));
+      if (description.trim()) formData.append("description", description.trim());
+      if (coverFile) formData.append("cover", coverFile);
+
+      await createEvent(token, formData);
       navigate("/events");
     } catch (err) {
       setError(err.message);
@@ -130,6 +133,15 @@ export default function CreateEvent() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional details about the event..."
             rows={4}
+          />
+        </div>
+
+        <div className="form-field">
+          <label>Cover Image (optional)</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setCoverFile(e.target.files[0] || null)}
           />
         </div>
 

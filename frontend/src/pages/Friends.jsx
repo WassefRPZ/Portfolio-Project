@@ -21,7 +21,6 @@ export default function Friends() {
   const { token, user } = useAuth();
   const [tab, setTab] = useState("friends");
 
-  /* Data */
   const [friends, setFriends] = useState([]);
   const [pending, setPending] = useState([]);
   const [sent, setSent] = useState([]);
@@ -49,7 +48,6 @@ export default function Friends() {
 
   useEffect(() => { reload(); }, [reload]);
 
-  /* Actions */
   async function handleAccept(requesterId) {
     setActionLoading(requesterId);
     try {
@@ -99,10 +97,9 @@ export default function Friends() {
     finally { setActionLoading(null); }
   }
 
-  /* Helpers */
   const friendIds = new Set(friends.map((f) => f.id));
-  const sentIds = new Set(sent.map((s) => s.receiver?.id));
-  const pendingIds = new Set(pending.map((p) => p.requester?.id));
+  const sentIds = new Set(sent.map((s) => s.id));
+  const pendingIds = new Set(pending.map((p) => p.id));
   const currentId = user ? Number(user.id) : null;
 
   if (loading) {
@@ -113,7 +110,6 @@ export default function Friends() {
     <div className="friends-page">
       <h1>Friends</h1>
 
-      {/* Tabs */}
       <div className="friends-tabs">
         <button className={`tab ${tab === "friends" ? "tab--active" : ""}`} onClick={() => setTab("friends")}>
           Friends ({friends.length})
@@ -125,18 +121,21 @@ export default function Friends() {
           Sent ({sent.length})
         </button>
         <button className={`tab ${tab === "search" ? "tab--active" : ""}`} onClick={() => setTab("search")}>
-          🔎 Find players
+          Find players
         </button>
       </div>
 
-      {/* Friends list */}
       {tab === "friends" && (
         <div className="friends-list">
           {friends.length === 0 && <p className="friends-empty">No friends yet. Search for players!</p>}
           {friends.map((f) => (
             <div key={f.id} className="friend-card">
               <div className="friend-card__left">
-                <div className="friend-avatar">{getInitials(f.username)}</div>
+                {f.profile_image_url ? (
+                  <img src={f.profile_image_url} alt={f.username} className="friend-avatar" />
+                ) : (
+                  <div className="friend-avatar">{getInitials(f.username)}</div>
+                )}
                 <div>
                   <div className="friend-name">{f.username}</div>
                   <div className="friend-city">{f.city || ""}</div>
@@ -154,68 +153,65 @@ export default function Friends() {
         </div>
       )}
 
-      {/* Pending requests received */}
       {tab === "pending" && (
         <div className="friends-list">
           {pending.length === 0 && <p className="friends-empty">No pending requests.</p>}
-          {pending.map((p) => {
-            const requester = p.requester;
-            if (!requester) return null;
-            return (
-              <div key={requester.id} className="friend-card">
+          {pending.map((p) => (
+              <div key={p.id} className="friend-card">
                 <div className="friend-card__left">
-                  <div className="friend-avatar">{getInitials(requester.username)}</div>
+                  {p.profile_image_url ? (
+                    <img src={p.profile_image_url} alt={p.username} className="friend-avatar" />
+                  ) : (
+                    <div className="friend-avatar">{getInitials(p.username)}</div>
+                  )}
                   <div>
-                    <div className="friend-name">{requester.username}</div>
-                    <div className="friend-city">{requester.city || ""}</div>
+                    <div className="friend-name">{p.username}</div>
+                    <div className="friend-city">{p.city || ""}</div>
                   </div>
                 </div>
                 <div className="friend-card__actions">
                   <button
-                    onClick={() => handleAccept(requester.id)}
-                    disabled={actionLoading === requester.id}
+                    onClick={() => handleAccept(p.id)}
+                    disabled={actionLoading === p.id}
                     className="btn-brown-sm"
                   >
                     Accept
                   </button>
                   <button
-                    onClick={() => handleDecline(requester.id)}
-                    disabled={actionLoading === requester.id}
+                    onClick={() => handleDecline(p.id)}
+                    disabled={actionLoading === p.id}
                     className="btn-outline-sm"
                   >
                     Decline
                   </button>
                 </div>
               </div>
-            );
-          })}
+          ))}
         </div>
       )}
 
-      {/* Sent requests */}
       {tab === "sent" && (
         <div className="friends-list">
           {sent.length === 0 && <p className="friends-empty">No sent requests.</p>}
-          {sent.map((s) => {
-            const receiver = s.receiver;
-            if (!receiver) return null;
-            return (
-              <div key={receiver.id} className="friend-card">
+          {sent.map((s) => (
+              <div key={s.id} className="friend-card">
                 <div className="friend-card__left">
-                  <div className="friend-avatar">{getInitials(receiver.username)}</div>
+                  {s.profile_image_url ? (
+                    <img src={s.profile_image_url} alt={s.username} className="friend-avatar" />
+                  ) : (
+                    <div className="friend-avatar">{getInitials(s.username)}</div>
+                  )}
                   <div>
-                    <div className="friend-name">{receiver.username}</div>
-                    <div className="friend-city">{receiver.city || ""}</div>
+                    <div className="friend-name">{s.username}</div>
+                    <div className="friend-city">{s.city || ""}</div>
                   </div>
                 </div>
                 <span className="friend-badge">Pending...</span>
               </div>
-            );
-          })}
+          ))}
         </div>
       )}
 
-      {/* Search */}
       {tab === "search" && (
         <div className="friends-search">
           <form onSubmit={handleSearch} className="friends-search-form">
@@ -239,7 +235,11 @@ export default function Friends() {
                 return (
                   <div key={u.id} className="friend-card">
                     <div className="friend-card__left">
-                      <div className="friend-avatar">{getInitials(u.username)}</div>
+                      {u.profile_image_url ? (
+                        <img src={u.profile_image_url} alt={u.username} className="friend-avatar" />
+                      ) : (
+                        <div className="friend-avatar">{getInitials(u.username)}</div>
+                      )}
                       <div>
                         <div className="friend-name">{u.username}</div>
                         <div className="friend-city">{u.city || ""}</div>

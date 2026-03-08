@@ -25,11 +25,9 @@ export default function D20Fantasy() {
         </filter>
       </defs>
 
-      {/* Glow derrière */}
       <circle cx="120" cy="120" r="90" fill="url(#d20Glow)" />
 
       <g filter="url(#d20Shadow)">
-        {/* Forme */}
         <polygon
           points="120,16 198,64 224,120 198,176 120,224 42,176 16,120 42,64"
           fill="url(#d20Gem)"
@@ -37,7 +35,6 @@ export default function D20Fantasy() {
           strokeWidth="4"
         />
 
-        {/* Facettes (simple) */}
         <g stroke="rgba(255,255,255,0.18)" strokeWidth="2">
           <line x1="120" y1="16" x2="120" y2="224" />
           <line x1="16" y1="120" x2="224" y2="120" />
@@ -45,7 +42,6 @@ export default function D20Fantasy() {
           <line x1="198" y1="64" x2="42" y2="176" />
         </g>
 
-        {/* Nombre */}
         <text
           x="120"
           y="150"

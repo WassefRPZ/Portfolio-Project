@@ -246,6 +246,7 @@ class BoardGameFacade:
             event_data = event.to_dict()
             if event.game_obj:
                 event_data['game'] = event.game_obj.to_dict()
+            event_data['participant_ids'] = [p.user_id for p in event.participants if p.status == 'confirmed']
             result.append(event_data)
         return result, total_count, None
 
@@ -502,6 +503,10 @@ class BoardGameFacade:
             image_url=image_url,
         )
         self.posts.save(post)
+        # Force load author + profile so to_dict() includes username & avatar
+        db.session.refresh(post)
+        if post.author:
+            _ = post.author.profile
         return post.to_dict(), None
 
     def get_post(self, post_id):

@@ -13,7 +13,7 @@ export async function apiRequest(endpoint, { token, ...options } = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  if (options.body && !headers["Content-Type"]) {
+  if (options.body && !(options.body instanceof FormData) && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
 

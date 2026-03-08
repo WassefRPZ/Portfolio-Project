@@ -95,6 +95,9 @@ def create_app():
                 "auth":    "/api/v1/auth",
                 "users":   "/api/v1/users",
                 "events":  "/api/v1/events",
+                "friends": "/api/v1/friends",
+                "games":   "/api/v1/games",
+                "posts":   "/api/v1/posts",
                 "search":  "/api/v1/search",
             }
         }

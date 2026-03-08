@@ -19,10 +19,16 @@ class EventParticipant(db.Model):
                            backref='participations', lazy='select')
 
     def to_dict(self):
-        return {
+        data = {
             "id":        self.id,
             "event_id":  self.event_id,
             "user_id":   self.user_id,
             "status":    self.status,
             "joined_at": self.joined_at.isoformat() if self.joined_at else None,
         }
+        # Include user info when the relationship is loaded
+        if self.user and self.user.profile:
+            data["username"] = self.user.profile.username
+            data["profile_image_url"] = self.user.profile.profile_image_url
+            data["city"] = self.user.profile.city or ""
+        return data

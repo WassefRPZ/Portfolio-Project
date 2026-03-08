@@ -6,6 +6,8 @@ import Friends from "./pages/Friends";
 import Events from "./pages/Events";
 import Games from "./pages/Games";
 import CreateEvent from "./pages/CreateEvent";
+import EventDetail from "./pages/EventDetail";
+import Profile from "./pages/Profile";
 import Signup from "./pages/Signup";
 
 import AppLayout from "./components/AppLayout";
@@ -33,7 +35,9 @@ export default function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/friends" element={<Friends />} />
           <Route path="/events" element={<Events />} />
+          <Route path="/events/:id" element={<EventDetail />} />
           <Route path="/games" element={<Games />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/create-event" element={<CreateEvent />} />
         </Route>
 

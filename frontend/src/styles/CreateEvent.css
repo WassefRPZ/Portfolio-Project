@@ -1,4 +1,3 @@
-/* ── Create Event page ── */
 
 .create-event-page h1 {
   margin: 0 0 24px;
@@ -22,7 +21,6 @@
   font-size: 14px;
 }
 
-/* Fields */
 .form-field {
   display: flex;
   flex-direction: column;
@@ -46,12 +44,14 @@
   outline: none;
   background: #fff;
   font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {
   border-color: #6d4c41;
+  box-shadow: 0 0 0 3px rgba(109, 76, 65, 0.1);
 }
 
 .form-field textarea {
@@ -63,7 +63,6 @@
   gap: 16px;
 }
 
-/* Actions */
 .form-actions {
   display: flex;
   gap: 12px;
@@ -79,15 +78,19 @@
   font-weight: 900;
   font-size: 15px;
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .form-actions .btn-brown:hover {
-  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 76, 65, 0.3);
 }
 
 .form-actions .btn-brown:disabled {
   opacity: 0.5;
   cursor: default;
+  transform: none;
+  box-shadow: none;
 }
 
 .form-actions .btn-outline {
@@ -99,8 +102,30 @@
   font-weight: 900;
   font-size: 15px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .form-actions .btn-outline:hover {
   background: #f4f1ea;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(109, 76, 65, 0.15);
+}
+
+@media (max-width: 768px) {
+  .create-event-form {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .create-event-page h1 {
+    font-size: 26px;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 14px;
+  }
+  .form-actions {
+    flex-direction: column;
+  }
 }

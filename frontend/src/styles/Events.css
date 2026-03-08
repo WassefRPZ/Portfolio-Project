@@ -1,10 +1,8 @@
-/* ── Events page ── */
 
 .events-page {
   background: #fafafa;
 }
 
-/* Header row */
 .events-header {
   display: flex;
   align-items: center;
@@ -29,10 +27,12 @@
   color: #fff;
   font-weight: 900;
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .events-create-btn:hover {
-  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 76, 65, 0.3);
 }
 
 .events-create-btn span {
@@ -40,7 +40,6 @@
   line-height: 0;
 }
 
-/* Search */
 .events-search {
   margin-bottom: 22px;
 }
@@ -54,10 +53,18 @@
   border-radius: 12px;
   padding: 12px 14px;
   max-width: 880px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.events-search-bar:focus-within {
+  border-color: #6d4c41;
+  box-shadow: 0 0 0 3px rgba(109, 76, 65, 0.1);
 }
 
 .events-search-icon {
-  color: #777;
+  color: #999;
+  display: flex;
+  align-items: center;
 }
 
 .events-search-bar input {
@@ -68,7 +75,10 @@
   background: transparent;
 }
 
-/* List */
+.events-search-bar input:focus {
+  box-shadow: none;
+}
+
 .events-list {
   display: grid;
   gap: 18px;
@@ -80,7 +90,6 @@
   padding: 18px;
 }
 
-/* Event card */
 .event-card {
   background: #fff;
   border: 1px solid #e6e6e6;
@@ -90,6 +99,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.event-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .event-card__left {
@@ -139,7 +154,6 @@
   min-width: 150px;
 }
 
-/* Date badge */
 .date-badge {
   width: 64px;
   height: 64px;
@@ -151,6 +165,11 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.event-card:hover .date-badge {
+  transform: scale(1.05);
 }
 
 .date-badge__month {
@@ -166,7 +185,6 @@
   color: #2e2e2e;
 }
 
-/* Status pill */
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -186,7 +204,6 @@
   color: #6d4c41;
 }
 
-/* Icon text */
 .icon-text {
   display: flex;
   align-items: center;
@@ -197,9 +214,11 @@
 
 .icon-text__icon {
   opacity: 0.9;
+  display: flex;
+  align-items: center;
+  color: #6d4c41;
 }
 
-/* Buttons */
 .btn-brown {
   padding: 10px 14px;
   border-radius: 12px;
@@ -208,10 +227,12 @@
   color: #fff;
   font-weight: 900;
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .btn-brown:hover {
-  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 76, 65, 0.3);
 }
 
 .btn-outline {
@@ -222,13 +243,15 @@
   color: #6d4c41;
   font-weight: 900;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .btn-outline:hover {
   background: #f4f1ea;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(109, 76, 65, 0.15);
 }
 
-/* Event card badge */
 .event-card__badge {
   font-size: 13px;
   color: #999;
@@ -236,8 +259,64 @@
   text-align: center;
 }
 
-/* Cancelled pill */
 .status-pill--cancelled {
   background: #ffebee;
   color: #c62828;
+}
+
+.event-card__owner-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-danger-sm {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #c62828;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-danger-sm:hover {
+  background: #b71c1c;
+}
+
+.btn-danger-sm:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@media (max-width: 768px) {
+  .events-list {
+    max-width: 100%;
+  }
+  .events-search-bar {
+    max-width: 100%;
+  }
+  .event-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .event-card__actions {
+    align-self: flex-end;
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 480px) {
+  .events-header h1 {
+    font-size: 26px;
+  }
+  .events-create-btn {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+  .event-card__meta {
+    gap: 12px;
+  }
 }

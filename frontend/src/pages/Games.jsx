@@ -6,6 +6,7 @@ import {
   addFavoriteGame,
   removeFavoriteGame,
 } from "../api/games";
+import { FiSearch } from "react-icons/fi";
 import "../styles/Games.css";
 
 export default function Games() {
@@ -65,9 +66,8 @@ export default function Games() {
     <div className="games-page">
       <h1>Board Games</h1>
 
-      {/* Search */}
       <div className="games-search-bar">
-        <span className="games-search-icon">🔎</span>
+        <FiSearch className="games-search-icon" size={18} />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -75,7 +75,6 @@ export default function Games() {
         />
       </div>
 
-      {/* Grid */}
       <div className="games-grid">
         {filtered.map((game) => {
           const isFav = favoriteIds.has(game.id);
@@ -90,14 +89,14 @@ export default function Games() {
                   className="game-card__img"
                 />
               ) : (
-                <div className="game-card__placeholder">🎲</div>
+                <div className="game-card__placeholder">?</div>
               )}
 
               <div className="game-card__body">
                 <div className="game-card__name">{game.name}</div>
 
                 <div className="game-card__meta">
-                  <span>👥 {game.min_players}–{game.max_players}</span>
+                  <span>{game.min_players}–{game.max_players} players</span>
                   <span>⏱ {game.play_time_minutes} min</span>
                 </div>
 

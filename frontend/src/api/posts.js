@@ -11,3 +11,10 @@ export async function createPost(token, content) {
     body: JSON.stringify({ content, post_type: "text" }),
   });
 }
+
+export async function deletePost(token, postId) {
+  return apiRequest(`/posts/${postId}`, {
+    token,
+    method: "DELETE",
+  });
+}

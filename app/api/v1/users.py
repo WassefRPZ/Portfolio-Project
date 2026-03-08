@@ -63,6 +63,14 @@ def search_users():
     return jsonify({"success": True, "data": users}), 200
 
 
+@api_v1.route('/users/me/favorite-games', methods=['GET'])
+@jwt_required()
+def get_favorite_games():
+    current_user_id = int(get_jwt_identity())
+    games = facade.get_favorite_games(current_user_id)
+    return jsonify({"success": True, "data": games}), 200
+
+
 @api_v1.route('/users/me/favorite-games', methods=['POST'])
 @jwt_required()
 def add_favorite_game():

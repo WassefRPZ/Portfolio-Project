@@ -37,10 +37,9 @@ export default function Signup() {
 
   return (
     <div className="auth-page">
-      {/* LEFT SIDE */}
       <div className="auth-left">
         <div className="auth-brand">
-          <h1>🎲 BoardGame</h1>
+          <h1>BoardGame Hub</h1>
           <p>Create your account to start organizing game nights</p>
         </div>
 
@@ -91,6 +90,9 @@ export default function Signup() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <small className="auth-hint">
+              Min. 8 characters, with uppercase, lowercase, number &amp; special character
+            </small>
           </div>
 
           <div className="auth-field">
@@ -115,7 +117,6 @@ export default function Signup() {
         </form>
       </div>
 
-      {/* RIGHT SIDE */}
       <div className="auth-right">
         <D20Fantasy />
         <h2>Join the Adventure</h2>

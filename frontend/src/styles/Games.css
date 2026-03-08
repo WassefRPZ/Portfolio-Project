@@ -1,4 +1,3 @@
-/* ── Games page ── */
 
 .games-page h1 {
   margin: 0 0 18px;
@@ -12,7 +11,6 @@
   padding: 18px 0;
 }
 
-/* Search */
 .games-search-bar {
   display: flex;
   align-items: center;
@@ -23,10 +21,18 @@
   padding: 12px 14px;
   max-width: 500px;
   margin-bottom: 24px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.games-search-bar:focus-within {
+  border-color: #6d4c41;
+  box-shadow: 0 0 0 3px rgba(109, 76, 65, 0.1);
 }
 
 .games-search-icon {
-  color: #777;
+  color: #999;
+  display: flex;
+  align-items: center;
 }
 
 .games-search-bar input {
@@ -37,7 +43,10 @@
   background: transparent;
 }
 
-/* Grid */
+.games-search-bar input:focus {
+  box-shadow: none;
+}
+
 .games-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -51,12 +60,23 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 .game-card__img {
   width: 100%;
   height: 160px;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.game-card:hover .game-card__img {
+  transform: scale(1.03);
 }
 
 .game-card__placeholder {
@@ -97,7 +117,6 @@
   line-height: 1.4;
 }
 
-/* Favorite button */
 .game-fav-btn {
   margin-top: auto;
   padding: 8px 14px;
@@ -109,10 +128,13 @@
   font-size: 13px;
   cursor: pointer;
   align-self: flex-start;
+  transition: all 0.2s ease;
 }
 
 .game-fav-btn:hover {
   background: #f4f1ea;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(109, 76, 65, 0.15);
 }
 
 .game-fav-btn--active {
@@ -122,11 +144,31 @@
 }
 
 .game-fav-btn--active:hover {
-  opacity: 0.9;
-  background: #6d4c41;
+  background: #5d3f33;
+  box-shadow: 0 2px 8px rgba(109, 76, 65, 0.3);
 }
 
 .game-fav-btn:disabled {
   opacity: 0.5;
   cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .games-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+  .games-search-bar {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .games-page h1 {
+    font-size: 26px;
+  }
+  .games-grid {
+    grid-template-columns: 1fr;
+  }
 }

@@ -4,16 +4,8 @@ export async function getAllGames(token) {
   return apiRequest("/games", { token });
 }
 
-export async function getPopularGames(token) {
-  return apiRequest("/games/popular", { token });
-}
-
 export async function searchGames(token, query) {
   return apiRequest(`/games/search?q=${encodeURIComponent(query)}`, { token });
-}
-
-export async function getGameDetails(token, gameId) {
-  return apiRequest(`/games/${gameId}`, { token });
 }
 
 export async function getFavoriteGames(token) {

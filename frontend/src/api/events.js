@@ -14,10 +14,11 @@ export async function getEventDetails(token, eventId) {
 }
 
 export async function createEvent(token, data) {
+  const isFormData = data instanceof FormData;
   return apiRequest("/events", {
     token,
     method: "POST",
-    body: JSON.stringify(data),
+    body: isFormData ? data : JSON.stringify(data),
   });
 }
 
@@ -27,4 +28,8 @@ export async function joinEvent(token, eventId) {
 
 export async function leaveEvent(token, eventId) {
   return apiRequest(`/events/${eventId}/leave`, { token, method: "POST" });
+}
+
+export async function deleteEvent(token, eventId) {
+  return apiRequest(`/events/${eventId}`, { token, method: "DELETE" });
 }

@@ -2,14 +2,9 @@ import { createContext, useContext, useMemo, useState } from "react";
 
 const AuthContext = createContext(null);
 
-/**
- * Decode le payload d'un JWT sans librairie externe.
- * Retourne { username, email, role, sub, exp, ... } ou null si invalide.
- */
 function decodeToken(token) {
   try {
     const payload = token.split(".")[1];
-    // atob ne gère pas le base64url → on remplace les caractères
     const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
     return JSON.parse(json);
   } catch {
@@ -17,20 +12,15 @@ function decodeToken(token) {
   }
 }
 
-/**
- * Vérifie si un token est expiré en lisant le champ `exp`.
- */
 function isTokenExpired(token) {
   const decoded = decodeToken(token);
   if (!decoded?.exp) return true;
-  // exp est en secondes, Date.now() en millisecondes
   return decoded.exp * 1000 < Date.now();
 }
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => {
     const stored = localStorage.getItem("token");
-    // Si le token stocké est expiré, on le supprime directement
     if (stored && isTokenExpired(stored)) {
       localStorage.removeItem("token");
       return null;
@@ -40,7 +30,6 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = Boolean(token);
 
-  // Infos utilisateur extraites du token (username, email, role)
   const user = useMemo(() => {
     if (!token) return null;
     const decoded = decodeToken(token);

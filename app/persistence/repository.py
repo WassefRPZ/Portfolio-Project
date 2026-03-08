@@ -89,9 +89,11 @@ class EventRepository(SQLAlchemyRepository):
         return (
             Event.query
             .options(
-                joinedload(Event.creator),
+                joinedload(Event.creator).joinedload(User.profile),
                 joinedload(Event.game_obj),
-                joinedload(Event.participants),
+                joinedload(Event.participants)
+                    .joinedload(EventParticipant.user)
+                    .joinedload(User.profile),
             )
             .filter_by(id=event_id)
             .first()
@@ -265,6 +267,7 @@ class PostRepository(SQLAlchemyRepository):
         total = Post.query.count()
         posts = (
             Post.query
+            .options(joinedload(Post.author).joinedload(User.profile))
             .order_by(Post.created_at.desc())
             .offset(offset).limit(limit)
             .all()
@@ -276,6 +279,7 @@ class PostRepository(SQLAlchemyRepository):
         posts = (
             Post.query
             .filter_by(author_id=author_id)
+            .options(joinedload(Post.author).joinedload(User.profile))
             .order_by(Post.created_at.desc())
             .offset(offset).limit(limit)
             .all()

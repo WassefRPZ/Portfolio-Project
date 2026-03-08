@@ -1,0 +1,248 @@
+
+.event-detail {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.event-detail__back {
+  background: none;
+  border: none;
+  color: #6d4c41;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 20px;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.event-detail__back:hover {
+  transform: translateX(-4px);
+}
+
+.event-detail__loading,
+.event-detail__error {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+.event-detail__error {
+  color: #c62828;
+}
+
+.event-detail__cover {
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.event-detail__cover img {
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  display: block;
+}
+
+.event-detail__card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
+}
+
+.event-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.event-detail__header h1 {
+  font-size: 1.6rem;
+  color: #2e2e2e;
+  margin: 0;
+}
+
+.event-detail__desc {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.event-detail__meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #f4f1ea;
+  border-radius: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.meta-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.meta-item__icon {
+  color: #6d4c41;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.meta-item__label {
+  font-size: 0.75rem;
+  color: #999;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.meta-item__value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2e2e2e;
+  margin-top: 2px;
+}
+
+.event-detail__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.event-detail__badge {
+  font-size: 0.9rem;
+  color: #6d4c41;
+  font-weight: 700;
+}
+
+.event-detail__participants {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.event-detail__participants h2 {
+  color: #6d4c41;
+  font-size: 1.2rem;
+  margin-bottom: 16px;
+}
+
+.event-detail__empty {
+  color: #999;
+  font-size: 0.95rem;
+}
+
+.participants-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.participant-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f4f1ea;
+  border-radius: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.participant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.participant-card__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.participant-card__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #6d4c41;
+}
+
+.participant-card__avatar-placeholder {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #6d4c41;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.participant-card__name {
+  font-weight: 700;
+  color: #2e2e2e;
+}
+
+.participant-card__you {
+  color: #6d4c41;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.participant-card__city {
+  font-size: 0.8rem;
+  color: #999;
+  margin-top: 2px;
+}
+
+.participant-card__action {
+  flex-shrink: 0;
+}
+
+.participant-card__badge {
+  font-size: 0.8rem;
+  color: #388e3c;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .event-detail__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .event-detail__meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .participant-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .participant-card__action {
+    align-self: flex-end;
+  }
+}

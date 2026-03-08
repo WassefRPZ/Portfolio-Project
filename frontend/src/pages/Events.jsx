@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getEvents, joinEvent, leaveEvent } from "../api/events";
+import { getEvents, joinEvent, leaveEvent, deleteEvent } from "../api/events";
+import { FiSearch, FiClock, FiMapPin, FiUsers } from "react-icons/fi";
 import "../styles/Events.css";
-
-/* ── helpers ── */
-
 function parseDate(iso) {
   if (!iso) return { month: "—", day: "--" };
   const d = new Date(iso);
@@ -45,9 +43,6 @@ function IconText({ icon, children }) {
     </div>
   );
 }
-
-/* ── page ── */
-
 export default function Events() {
   const { token, user } = useAuth();
   const navigate = useNavigate();
@@ -72,7 +67,6 @@ export default function Events() {
     fetchEvents();
   }, [fetchEvents]);
 
-  /* Join / leave handlers */
   async function handleJoin(eventId) {
     setActionLoading(eventId);
     try {
@@ -97,14 +91,25 @@ export default function Events() {
     }
   }
 
-  /* Search filter (client-side on loaded events) */
+  async function handleDelete(eventId) {
+    if (!window.confirm("Are you sure you want to delete this event?")) return;
+    setActionLoading(eventId);
+    try {
+      await deleteEvent(token, eventId);
+      await fetchEvents();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   const filtered = events.filter((e) => {
     if (!query.trim()) return true;
     const hay = `${e.title} ${e.city} ${e.description}`.toLowerCase();
     return hay.includes(query.toLowerCase());
   });
 
-  /* Decide button state per event */
   function getEventAction(event) {
     const userId = user ? Number(user.id) : null;
 
@@ -112,12 +117,8 @@ export default function Events() {
     if (event.status === "full") return "full";
     if (event.status === "cancelled") return "cancelled";
 
-    // Check if current user is a participant
-    if (event.participants) {
-      const isParticipant = event.participants.some(
-        (p) => p.user_id === userId && p.status === "confirmed"
-      );
-      if (isParticipant) return "joined";
+    if (event.participant_ids && event.participant_ids.includes(userId)) {
+      return "joined";
     }
 
     return "join";
@@ -129,18 +130,16 @@ export default function Events() {
 
   return (
     <div className="events-page">
-      {/* Header */}
       <div className="events-header">
         <h1>Events</h1>
         <button onClick={() => navigate("/create-event")} className="events-create-btn">
-          <span>＋</span> Create Event
+          <span>+</span> Create Event
         </button>
       </div>
 
-      {/* Search */}
       <div className="events-search">
         <div className="events-search-bar">
-          <span className="events-search-icon">🔎</span>
+          <FiSearch className="events-search-icon" size={18} />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -149,7 +148,6 @@ export default function Events() {
         </div>
       </div>
 
-      {/* List */}
       <div className="events-list">
         {filtered.map((event) => {
           const { month, day } = parseDate(event.date_time);
@@ -158,7 +156,12 @@ export default function Events() {
           const isLoading = actionLoading === event.id;
 
           return (
-            <div key={event.id} className="event-card">
+            <div
+              key={event.id}
+              className="event-card"
+              onClick={() => navigate(`/events/${event.id}`)}
+              style={{ cursor: "pointer" }}
+            >
               <div className="event-card__left">
                 <DateBadge month={month} day={day} />
 
@@ -170,9 +173,9 @@ export default function Events() {
                   </div>
 
                   <div className="event-card__meta">
-                    <IconText icon="🕒">{formatTime(event.date_time)}</IconText>
-                    <IconText icon="📍">{event.location_text}</IconText>
-                    <IconText icon="👥">
+                    <IconText icon={<FiClock size={14} />}>{formatTime(event.date_time)}</IconText>
+                    <IconText icon={<FiMapPin size={14} />}>{event.location_text}</IconText>
+                    <IconText icon={<FiUsers size={14} />}>
                       {event.current_players}/{event.max_players} players
                     </IconText>
                   </div>
@@ -189,7 +192,7 @@ export default function Events() {
                 </div>
               </div>
 
-              <div className="event-card__actions">
+              <div className="event-card__actions" onClick={(e) => e.stopPropagation()}>
                 {action === "join" && (
                   <button
                     onClick={() => handleJoin(event.id)}
@@ -211,7 +214,16 @@ export default function Events() {
                 )}
 
                 {action === "owner" && (
-                  <span className="event-card__badge">Your event</span>
+                  <div className="event-card__owner-actions">
+                    <span className="event-card__badge">Your event</span>
+                    <button
+                      onClick={() => handleDelete(event.id)}
+                      disabled={isLoading}
+                      className="btn-danger-sm"
+                    >
+                      {isLoading ? "..." : "Delete"}
+                    </button>
+                  </div>
                 )}
 
                 {action === "full" && (

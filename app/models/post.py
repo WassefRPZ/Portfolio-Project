@@ -16,10 +16,12 @@ class Post(db.Model):
 
     def to_dict(self):
         return {
-            "id":         self.id,
-            "author_id":  self.author_id,
-            "post_type":  self.post_type,
-            "content":    self.content,
-            "image_url":  self.image_url,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "id":                self.id,
+            "author_id":         self.author_id,
+            "username":          self.author.profile.username if self.author and self.author.profile else None,
+            "profile_image_url": self.author.profile.profile_image_url if self.author and self.author.profile else None,
+            "post_type":         self.post_type,
+            "content":           self.content,
+            "image_url":         self.image_url,
+            "created_at":        self.created_at.isoformat() if self.created_at else None,
         }
