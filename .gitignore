@@ -19,6 +19,5 @@ instance/
 .bin
 node_modules/
 app/static/
-tests/
 test_manuel_complet.py
 test_api_externes.py

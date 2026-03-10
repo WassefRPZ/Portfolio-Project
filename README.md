@@ -1,157 +1,156 @@
 # BoardGame Hub 
 
-Plateforme sociale pour les passionnés de jeux de société : créez des soirées jeux, gérez vos amis, partagez vos jeux favoris et discutez avec votre communauté.
+Social platform for board game enthusiasts: create game nights, manage your friends, share your favorite games and chat with your community.
 
 ---
 
-## Table des matières
+## Table of Contents
 
-1. [Présentation du projet](#présentation-du-projet)
-2. [Stack technique](#stack-technique)
-3. [Architecture du projet](#architecture-du-projet)
-4. [Prérequis](#prérequis)
-5. [Installation et configuration](#installation-et-configuration)
-6. [Lancement du projet](#lancement-du-projet)
-7. [Base de données](#base-de-données)
-8. [API REST — Endpoints](#api-rest--endpoints)
-9. [Variables d'environnement](#variables-denvironnement)
-10. [Services externes](#services-externes)
+1. [Project Overview](#project-overview)
+2. [Tech Stack](#tech-stack)
+3. [Project Architecture](#project-architecture)
+4. [Prerequisites](#prerequisites)
+5. [Installation and Setup](#installation-and-setup)
+6. [Running the Project](#running-the-project)
+7. [Database](#database)
+8. [REST API — Endpoints](#rest-api--endpoints)
+9. [Environment Variables](#environment-variables)
+10. [External Services](#external-services)
 11. [Tests](#tests)
-12. [Structure des fichiers](#structure-des-fichiers)
+12. [File Structure](#file-structure)
 
 ---
 
-## Présentation du projet
+## Project Overview
 
-**BoardGame Hub** est un réseau social permettant à des persones de :
+**BoardGame Hub** is a social network allowing people to:
 
-- S'inscrire et gérer leur profil (photo de profil, ville, bio)
-- Consulter un catalogue de jeux de société
-- Créer et rejoindre des soirées jeux
-- Gérer une liste d'amis (demande / acceptation / refus / suppression)
-- Publier des posts sur un fil d'actualité
-- Rechercher des utilisateurs, jeux et événements
-- Marquer des jeux en favoris
+- Register and manage their profile (profile picture, city, bio)
+- Browse a board game catalog
+- Create and join game nights
+- Manage a friends list (request / accept / decline / remove)
+- Publish posts on a news feed
+- Search for users, games and events
+- Mark games as favorites
 
 ---
 
-## Stack technique
+## Tech Stack
 
 ### Backend
 
-| Outil | Version | Rôle |
+| Tool | Version | Role |
 |---|---|---|
-| Python | 3.10+ | Langage principal |
-| Flask | 3.0.0 | Framework web |
-| Flask-SQLAlchemy | 3.1.1 | ORM pour MySQL |
-| Flask-JWT-Extended | 4.6.0 | Authentification JWT |
-| Flask-CORS | 4.0.0 | Gestion CORS |
+| Python | 3.10+ | Main language |
+| Flask | 3.0.0 | Web framework |
+| Flask-SQLAlchemy | 3.1.1 | ORM for MySQL |
+| Flask-JWT-Extended | 4.6.0 | JWT authentication |
+| Flask-CORS | 4.0.0 | CORS management |
 | Flask-Limiter | 3.5.1 | Rate limiting |
-| Flasgger | 0.9.7.1 | Documentation Swagger |
-| Cloudinary | 1.40.0 | Stockage des images |
-| mysql-connector-python | 8.2.0 | Driver MySQL |
-| python-dotenv | 1.0.0 | Chargement des variables .env |
-| requests | 2.31.0 | Appels HTTP (OpenCage) |
+| Flasgger | 0.9.7.1 | Swagger documentation |
+| Cloudinary | 1.40.0 | Image storage |
+| mysql-connector-python | 8.2.0 | MySQL driver |
+| python-dotenv | 1.0.0 | .env variable loading |
+| requests | 2.31.0 | HTTP calls (OpenCage) |
 
 ### Frontend
 
-| Outil | Version | Rôle |
+| Tool | Version | Role |
 |---|---|---|
-| React | 18+ | Interface utilisateur |
-| Vite | 7.x | Bundler et serveur de développement |
-| React Router | 6+ | Navigation côté client |
-| react-icons | - | Icônes |
+| React | 18+ | User interface |
+| Vite | 7.x | Bundler and development server |
+| React Router | 6+ | Client-side routing |
+| react-icons | - | Icons |
 
-### Base de données
+### Database
 
-- **MySQL** — Schéma relationnel avec 8 tables
+- **MySQL** — Relational schema with 8 tables
 
-### Services externes
+### External Services
 
-- **OpenCage Geocoding API** — Géocodage des adresses lors de la création d'événements
-- **Cloudinary** — Stockage et CDN des images (photos de profil, couvertures d'événements)
+- **OpenCage Geocoding API** — Geocoding addresses when creating events
+- **Cloudinary** — Image storage and CDN (profile pictures, event covers)
 
 ---
 
-## Architecture du projet
+## Project Architecture
 
 ```
 Portfolio-Project/
-├── run.py                  # Point d'entrée Flask
-├── config.py               # Configuration centralisée (env vars)
-├── requirements.txt        # Dépendances Python
-├── .env                    # Variables d'environnement (non versionné)
+├── run.py                  # Flask entry point
+├── config.py               # Centralized configuration (env vars)
+├── requirements.txt        # Python dependencies
+├── .env                    # Environment variables (not versioned)
 ├── app/
-│   ├── __init__.py         # Factory Flask (create_app), extensions
+│   ├── __init__.py         # Flask factory
 │   ├── api/
 │   │   └── v1/
 │   │       ├── __init__.py # Blueprint api_v1
-│   │       ├── auth.py     # Inscription / Connexion
-│   │       ├── users.py    # Profil utilisateur, favoris
-│   │       ├── games.py    # Catalogue de jeux
-│   │       ├── events.py   # Soirées jeux (CRUD + participation)
-│   │       ├── friends.py  # Gestion des amis
-│   │       ├── posts.py    # Fil d'actualité
-│   │       └── search.py   # Recherche globale
+│   │       ├── auth.py     # Register / Login
+│   │       ├── events.py   # Game nights (CRUD + participation)
+│   │       ├── friends.py  # Friends management
+│   │       ├── games.py    # Game catalog
+│   │       ├── posts.py    # News feed
+│   │       ├── search.py   # Global search
+│   │       └── users.py    # User profile, favorites
 │   ├── models/
-│   │   ├── user.py         # Modèle User
-│   │   ├── profile.py      # Modèle Profile (1-to-1 avec User)
-│   │   ├── game.py         # Modèle Game
-│   │   ├── event.py        # Modèle Event
+│   │   ├── user.py         # User model
+│   │   ├── profile.py      # Profile model (1-to-1 with User)
+│   │   ├── game.py         # Game model
+│   │   ├── event.py        # Event model
 │   │   ├── event_participant.py
 │   │   ├── event_comment.py
 │   │   ├── favorite_game.py
-│   │   ├── friend.py       # Modèle Friend (demandes + liens)
-│   │   └── post.py         # Modèle Post
+│   │   ├── friend.py       # Friend model (requests + links)
+│   │   └── post.py         # Post model
 │   ├── persistence/
-│   │   └── repository.py   # Couche d'accès aux données (Repository pattern)
+│   │   └── repository.py   # Data access layer (Repository pattern)
 │   └── services/
-│       └── facade.py       # Logique métier (Facade pattern)
+│       └── facade.py       # Business logic (Facade pattern)
 ├── database/
-│   ├── schema.sql          # Script SQL de création de la BDD
-│   └── seed.py             # Script de données initiales (admins + jeux)
+│   ├── schema.sql          # SQL script to create the DB
+│   └── seed.py             # Initial data script (admins + games)
 ├── frontend/
 │   ├── src/
-│   │   ├── api/            # Appels HTTP vers le backend
-│   │   ├── components/     # Composants React réutilisables
-│   │   ├── context/        # AuthContext (token JWT)
-│   │   ├── pages/          # Pages principales
+│   │   ├── api/            # HTTP calls to the backend
+│   │   ├── components/     # Reusable React components
+│   │   ├── context/        # AuthContext (JWT token)
+│   │   ├── pages/          # Main pages
 │   │   ├── routes/         # ProtectedRoute
-│   │   └── styles/         # CSS par page
+│   │   └── styles/         # CSS per page
 │   └── public/
-│       └── images/games/   # Images des jeux de société
-└── tests/                  # Tests unitaires et d'intégration pytest
+│       └── images/games/   # Board game images
+└── tests/                  # Unit and integration tests (pytest)
 ```
 
-### Patterns utilisés
+### Patterns Used
 
-- **Factory Pattern** : `create_app()` dans `app/__init__.py`
-- **Facade Pattern** : `app/services/facade.py` — couche unique d'accès à toute la logique métier
-- **Repository Pattern** : `app/persistence/repository.py` — abstraction de l'accès à la base de données
-- **Blueprint** : l'API est organisée en Blueprint Flask (`api_v1`)
+- **Factory Pattern** : `create_app()` in `app/__init__.py`
+- **Facade Pattern** : `app/services/facade.py` — single access layer for all business logic
+- **Repository Pattern** : `app/persistence/repository.py` — abstraction over database access
+- **Blueprint** : the API is organized as a Flask Blueprint (`api_v1`)
 
 ---
 
-## Prérequis
+## Prerequisites
 
 - Python 3.10+
-- Node.js 18+
 - MySQL 8.0+
-- Un compte Cloudinary
-- Une clé OpenCage Geocoding API
+- A Cloudinary account
+- An OpenCage Geocoding API key
 
 ---
 
-## Installation et configuration
+## Installation and Setup
 
-### 1. Cloner le repo
+### 1. Clone the repo
 
 ```bash
 git clone <https://github.com/WassefRPZ/Portfolio-Project.git>
 cd Portfolio-Project
 ```
 
-### 2. Backend — Environnement virtuel et dépendances
+### 2. Backend — Virtual environment and dependencies
 
 ```bash
 python3 -m venv .venv
@@ -159,25 +158,25 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Créer le fichier `.env`
+### 3. Create the `.env` file
 
-À la racine du projet, créer un fichier `.env` :
+At the root of the project, create a `.env` file:
 
 ```env
-SECRET_KEY=une_cle_secrete_tres_longue
-JWT_SECRET_KEY=une_autre_cle_jwt_secrete
+SECRET_KEY=a_very_long_secret_key
+JWT_SECRET_KEY=another_jwt_secret_key
 
 DB_HOST=127.0.0.1
 DB_USER=root
-DB_PASSWORD=ton_mot_de_passe_mysql
+DB_PASSWORD=your_mysql_password
 DB_NAME=boardgame_hub
 
 CORS_ORIGINS=http://localhost:5173
 
-OPENCAGE_API_KEY=ta_cle_opencage
-CLOUDINARY_CLOUD_NAME=ton_cloud_name
-CLOUDINARY_API_KEY=ta_cle_cloudinary
-CLOUDINARY_API_SECRET=ton_secret_cloudinary
+OPENCAGE_API_KEY=your_opencage_key
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_key
+CLOUDINARY_API_SECRET=your_cloudinary_secret
 
 SEED_ADMIN_PASSWORD=MotDePasse_Admin1!
 FLASK_DEBUG=false
@@ -185,13 +184,13 @@ FLASK_PORT=5000
 FLASK_HOST=127.0.0.1
 ```
 
-### 4. Créer la base de données MySQL
+### 4. Create the MySQL database
 
 ```bash
 mysql -u root -p < database/schema.sql
 ```
 
-### 5. Insérer les données initiales
+### 5. Insert initial data
 
 ```bash
 cd database
@@ -199,7 +198,7 @@ python3 seed.py
 cd ..
 ```
 
-### 6. Frontend — Dépendances
+### 6. Frontend — Dependencies
 
 ```bash
 cd frontend
@@ -209,32 +208,32 @@ cd ..
 
 ---
 
-## Lancement du projet
+## Running the Project
 
-**Terminal 1 — Backend Flask :**
+**Terminal 1 — Flask Backend:**
 
 ```bash
 source .venv/bin/activate
 python3 run.py
 ```
 
-Le backend sera disponible sur : http://127.0.0.1:5000  
-Documentation Swagger : http://127.0.0.1:5000/apidocs/
+Backend available at: http://127.0.0.1:5000  
+Swagger documentation: http://127.0.0.1:5000/apidocs/
 
-**Terminal 2 — Frontend React :**
+**Terminal 2 — React Frontend:**
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Le frontend sera disponible sur : http://localhost:5173
+Frontend available at: http://localhost:5173
 
 ---
 
-## Base de données
+## Database
 
-### Schéma relationnel
+### Relational Schema
 
 ```
 users (id, email, password_hash, role, created_at)
@@ -260,138 +259,138 @@ games (id, name, description, min_players, max_players, play_time_min, image_url
 
 | Table | Description |
 |---|---|
-| `users` | Comptes utilisateurs (email, mot de passe hashé, rôle) |
-| `profiles` | Profil public (1-to-1 avec users) |
-| `games` | Catalogue de jeux de société |
-| `events` | Soirées jeux créées par les utilisateurs |
-| `event_participants` | Inscriptions aux soirées (confirmed / pending) |
-| `event_comments` | Commentaires sur les soirées |
-| `favorite_games` | Jeux favoris par utilisateur |
-| `friends` | Demandes d'amis et liens d'amitié (pending / accepted) |
-| `posts` | Posts du fil d'actualité (text / image / news) |
+| `users` | User accounts (email, hashed password, role) |
+| `profiles` | Public profile (1-to-1 with users) |
+| `games` | Board game catalog |
+| `events` | Game nights created by users |
+| `event_participants` | Event registrations (confirmed / pending) |
+| `event_comments` | Comments on events |
+| `favorite_games` | Favorite games per user |
+| `friends` | Friend requests and friendships (pending / accepted) |
+| `posts` | News feed posts (text / image / news) |
 
 ---
 
-## API REST — Endpoints
+## REST API — Endpoints
 
-**Base URL :** `http://127.0.0.1:5000/api/v1`  
-**Authentification :** Bearer Token JWT dans le header `Authorization`
+**Base URL:** `http://127.0.0.1:5000/api/v1`  
+**Authentication:** Bearer JWT Token in the `Authorization` header
 
 ### Auth
 
-| Méthode | Route | Description | Auth |
+| Method | Route | Description | Auth |
 |---|---|---|---|
-| POST | `/auth/register` | Inscription | Non |
-| POST | `/auth/login` | Connexion | Non |
+| POST | `/auth/register` | Register | No |
+| POST | `/auth/login` | Login | No |
 
 ### Users
 
-| Méthode | Route | Description | Auth |
+| Method | Route | Description | Auth |
 |---|---|---|---|
-| GET | `/users/me` | Mon profil complet | Oui |
-| PUT | `/users/me` | Modifier mon profil / photo | Oui |
-| GET | `/users/<id>` | Profil public d'un utilisateur | Oui |
-| GET | `/users/search?q=&city=` | Rechercher des utilisateurs | Oui |
-| GET | `/users/me/favorite-games` | Mes jeux favoris | Oui |
-| POST | `/users/me/favorite-games` | Ajouter un jeu favori | Oui |
-| DELETE | `/users/me/favorite-games/<game_id>` | Retirer un jeu favori | Oui |
+| GET | `/users/me` | My full profile | Yes |
+| PUT | `/users/me` | Update my profile / photo | Yes |
+| GET | `/users/<id>` | Public profile of a user | Yes |
+| GET | `/users/search?q=&city=` | Search users | Yes |
+| GET | `/users/me/favorite-games` | My favorite games | Yes |
+| POST | `/users/me/favorite-games` | Add a favorite game | Yes |
+| DELETE | `/users/me/favorite-games/<game_id>` | Remove a favorite game | Yes |
 
 ### Games
 
-| Méthode | Route | Description | Auth |
+| Method | Route | Description | Auth |
 |---|---|---|---|
-| GET | `/games?limit=50&offset=0` | Liste de tous les jeux | Oui |
-| GET | `/games/search?q=` | Rechercher un jeu par nom | Oui |
+| GET | `/games?limit=50&offset=0` | List all games | Yes |
+| GET | `/games/search?q=` | Search a game by name | Yes |
 
 ### Events
 
-| Méthode | Route | Description | Auth |
+| Method | Route | Description | Auth |
 |---|---|---|---|
-| GET | `/events` | Liste des événements ouverts | Oui |
-| POST | `/events` | Créer un événement | Oui |
-| GET | `/events/<id>` | Détail d'un événement | Oui |
-| PUT | `/events/<id>` | Modifier un événement (créateur) | Oui |
-| DELETE | `/events/<id>` | Annuler un événement (créateur) | Oui |
-| POST | `/events/<id>/join` | Rejoindre un événement | Oui |
-| POST | `/events/<id>/leave` | Quitter un événement | Oui |
-| GET | `/events/<id>/comments` | Commentaires d'un événement | Oui |
-| POST | `/events/<id>/comments` | Poster un commentaire | Oui |
+| GET | `/events` | List open events | Yes |
+| POST | `/events` | Create an event | Yes |
+| GET | `/events/<id>` | Event details | Yes |
+| PUT | `/events/<id>` | Update an event (creator) | Yes |
+| DELETE | `/events/<id>` | Cancel an event (creator) | Yes |
+| POST | `/events/<id>/join` | Join an event | Yes |
+| POST | `/events/<id>/leave` | Leave an event | Yes |
+| GET | `/events/<id>/comments` | Event comments | Yes |
+| POST | `/events/<id>/comments` | Post a comment | Yes |
 
-**Filtres disponibles pour GET /events :**
-- `city` — filtrer par ville
-- `date` — filtrer par date (format ISO 8601 : `2024-12-25`)
-- `lat`, `lng`, `radius` — filtrer par géolocalisation (rayon en km, max 200)
+**Available filters for GET /events:**
+- `city` — filter by city
+- `date` — filter by date (ISO 8601 format: `2024-12-25`)
+- `lat`, `lng`, `radius` — filter by geolocation (radius in km, max 200)
 - `limit`, `offset` — pagination
 
 ### Friends
 
-| Méthode | Route | Description | Auth |
+| Method | Route | Description | Auth |
 |---|---|---|---|
-| GET | `/friends` | Ma liste d'amis | Oui |
-| GET | `/friends/pending` | Demandes reçues en attente | Oui |
-| GET | `/friends/sent` | Demandes envoyées | Oui |
-| POST | `/friends/request/<receiver_id>` | Envoyer une demande d'ami | Oui |
-| POST | `/friends/accept/<requester_id>` | Accepter une demande | Oui |
-| POST | `/friends/reject/<requester_id>` | Refuser une demande | Oui |
-| DELETE | `/friends/<user_id>` | Supprimer un ami | Oui |
+| GET | `/friends` | My friends list | Yes |
+| GET | `/friends/pending` | Pending received requests | Yes |
+| GET | `/friends/sent` | Sent requests | Yes |
+| POST | `/friends/request/<receiver_id>` | Send a friend request | Yes |
+| POST | `/friends/accept/<requester_id>` | Accept a request | Yes |
+| POST | `/friends/reject/<requester_id>` | Decline a request | Yes |
+| DELETE | `/friends/<user_id>` | Remove a friend | Yes |
 
 ### Posts
 
-| Méthode | Route | Description | Auth |
+| Method | Route | Description | Auth |
 |---|---|---|---|
-| GET | `/posts` | Fil d'actualité | Oui |
-| POST | `/posts` | Créer un post | Oui |
-| GET | `/posts/<id>` | Détail d'un post | Oui |
-| PUT | `/posts/<id>` | Modifier son post | Oui |
-| DELETE | `/posts/<id>` | Supprimer son post | Oui |
-| GET | `/posts/user/<user_id>` | Posts d'un utilisateur | Oui |
+| GET | `/posts` | News feed | Yes |
+| POST | `/posts` | Create a post | Yes |
+| GET | `/posts/<id>` | Post details | Yes |
+| PUT | `/posts/<id>` | Update your post | Yes |
+| DELETE | `/posts/<id>` | Delete your post | Yes |
+| GET | `/posts/user/<user_id>` | Posts by a user | Yes |
 
 ### Search
 
-| Méthode | Route | Description | Auth |
+| Method | Route | Description | Auth |
 |---|---|---|---|
-| GET | `/search?q=` | Recherche globale (users + events + games) | Oui |
+| GET | `/search?q=` | Global search (users + events + games) | Yes |
 
 ---
 
-## Variables d'environnement
+## Environment Variables
 
-| Variable | Obligatoire | Description |
+| Variable | Required | Description |
 |---|---|---|
-| `SECRET_KEY` | Oui | Clé secrète Flask |
-| `JWT_SECRET_KEY` | Oui | Clé JWT |
-| `DB_HOST` | Non (127.0.0.1) | Hôte MySQL |
-| `DB_USER` | Oui | Utilisateur MySQL |
-| `DB_PASSWORD` | Non | Mot de passe MySQL |
-| `DB_NAME` | Oui | Nom de la base de données |
-| `CORS_ORIGINS` | Non (*) | Origines autorisées CORS |
-| `OPENCAGE_API_KEY` | Oui* | Clé API OpenCage |
-| `CLOUDINARY_CLOUD_NAME` | Non | Cloud Cloudinary |
-| `CLOUDINARY_API_KEY` | Non | Clé Cloudinary |
-| `CLOUDINARY_API_SECRET` | Non | Secret Cloudinary |
-| `SEED_ADMIN_PASSWORD` | Oui (seed) | Mot de passe admins pour le seed |
-| `FLASK_DEBUG` | Non (false) | Mode debug Flask |
-| `FLASK_PORT` | Non (5000) | Port Flask |
-| `FLASK_HOST` | Non (127.0.0.1) | Hôte Flask |
+| `SECRET_KEY` | Yes | Flask secret key |
+| `JWT_SECRET_KEY` | Yes | JWT key |
+| `DB_HOST` | No (127.0.0.1) | MySQL host |
+| `DB_USER` | Yes | MySQL user |
+| `DB_PASSWORD` | No | MySQL password |
+| `DB_NAME` | Yes | Database name |
+| `CORS_ORIGINS` | No (*) | Allowed CORS origins |
+| `OPENCAGE_API_KEY` | Yes* | OpenCage API key |
+| `CLOUDINARY_CLOUD_NAME` | No | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | No | Cloudinary key |
+| `CLOUDINARY_API_SECRET` | No | Cloudinary secret |
+| `SEED_ADMIN_PASSWORD` | Yes (seed) | Admin password for the seed script |
+| `FLASK_DEBUG` | No (false) | Flask debug mode |
+| `FLASK_PORT` | No (5000) | Flask port |
+| `FLASK_HOST` | No (127.0.0.1) | Flask host |
 
 ---
 
-## Services externes
+## External Services
 
 ### OpenCage Geocoding API
 
-Utilisé lors de la **création d'un événement** pour transformer une adresse textuelle (`location_text`) en coordonnées GPS (`latitude`, `longitude`) et extraire la ville (`city`) et la région (`region`).
+Used when **creating an event** to convert a text address (`location_text`) into GPS coordinates (`latitude`, `longitude`) and extract the city (`city`) and region (`region`).
 
-- **Endpoint :** `https://api.opencagedata.com/geocode/v1/json`
-- **Documentation :** https://opencagedata.com/api
+- **Endpoint:** `https://api.opencagedata.com/geocode/v1/json`
+- **Documentation:** https://opencagedata.com/api
 
 ### Cloudinary
 
-Utilisé pour le **stockage des images** uploadées par les utilisateurs :
+Used for **storing images** uploaded by users.
 
-Les URL retournées sont stockées dans la base de données (`profile_image_url`, `cover_url`).
+The returned URLs are stored in the database (`profile_image_url`, `cover_url`).
 
-- **Documentation :** https://cloudinary.com/documentation
+- **Documentation:** https://cloudinary.com/documentation
 
 ---
 
@@ -402,46 +401,53 @@ source .venv/bin/activate
 pytest tests/ -v
 ```
 
-### Fichiers de tests
+Tests run against a dedicated isolated database (`boardgame_hub_test`) and mock all external services (OpenCage, Cloudinary) — no real HTTP calls are made.
 
-| Fichier | Couverture |
-|---|---|
-| `test_auth.py` | Inscription, connexion, validation |
-| `test_users.py` | Profil, mise à jour, favoris |
-| `test_games.py` | Liste, recherche de jeux |
-| `test_events.py` | CRUD événements, participation, commentaires |
-| `test_friends.py` | Demandes, acceptation, refus, suppression |
-| `test_posts.py` | CRUD posts |
-| `test_search.py` | Recherche globale |
+### Test Files
 
-## Fonctionnalités
+| File | Tests | Coverage |
+|---|---|---|
+| `conftest.py` | — | Shared fixtures, helpers, test DB setup, external service mocks |
+| `test_auth.py` | 15 | Register, login, input validation, duplicate detection |
+| `test_events.py` | 18 | CRUD events, join/leave, comments, permission checks |
+| `test_friends.py` | 22 | Send/accept/reject/remove requests, list friends, pending/sent |
+| `test_games.py` | 3 | Game listing, search by name |
+| `test_posts.py` | 13 | CRUD posts, feed listing, pagination, ownership checks |
+| `test_search.py` | 6 | Global search (users + events + games), no data leaks |
+| `test_users.py` | 9 | Profile get/update, user search, favorite games |
 
-- **Authentification** : Inscription, Connexion (JWT).
-- **Événements** : Création, recherche (par ville/date), participation, annulation.
-- **Utilisateurs** : Profils, gestion d'amis, jeux favoris.
-- **Jeux** : Catalogue de jeux, recherche.
-- **Social** : Commentaires sur les événements.
+**Total: 98 tests — 0 failures**
 
-##  Stack Technique
+> **Note:** The test database `boardgame_hub_test` must be accessible with the credentials defined in `.env`. It is created automatically on first run.
 
-- **Langage** : Python 3.x
-- **Framework** : Flask
-- **Base de données** : MySQL
-- **ORM** : SQLAlchemy
-- **Documentation API** : Flasgger (Swagger UI)
+## Features
+
+- **Authentication**: Register, Login (JWT).
+- **Events**: Create, search (by city/date), join, cancel.
+- **Users**: Profiles, friends management, favorite games.
+- **Games**: Game catalog, search.
+- **Social**: Comments on events.
+
+## Tech Stack
+
+- **Language**: Python 3.x
+- **Framework**: Flask
+- **Database**: MySQL
+- **ORM**: SQLAlchemy
+- **API Documentation**: Flasgger (Swagger UI)
 
 ## Installation
 
-### 1. Prérequis
-- Python 3.8 ou supérieur
-- MySQL Server installé et lancé
+### 1. Prerequisites
+- Python 3.8 or higher
+- MySQL Server installed and running
 
-### 2. Cloner le projet
+### 2. Clone the project
 ```bash
 git clone [https://github.com/WassefRPZ/Portfolio-Project.git]
 cd portfolio-project
 
-Installer les dépendances
+Install dependencies
 Bash
 pip install -r Portfolio-Project-app/requirements.txt
 
@@ -449,28 +455,28 @@ pip install -r Portfolio-Project-app/requirements.txt
 FLASK_APP=run.py
 FLASK_ENV=development
 
-# Base de données
+# Database
 DB_HOST=127.0.0.1
 DB_USER=root
 DB_PASSWORD=""
 DB_NAME=boardgame_meetup
 
-# Sécurité
-SECRET_KEY=une_clé_très_secrete_et_aléatoire
-JWT_SECRET_KEY=une_autre_clé_secrete_jwt
+# Security
+SECRET_KEY=a_very_secret_and_random_key
+JWT_SECRET_KEY=another_secret_jwt_key
 
- Démarrage
-Le script de lancement initialise automatiquement les tables et injecte des données de test (Admin, Jeux) si elles n'existent pas.
+ Starting the app
+The launch script automatically initializes the tables and injects test data (Admin, Games) if they don't already exist.
 
 Bash
 cd Portfolio-Project-app
 python3 run.py
-L'API sera accessible sur : http://127.0.0.1:5000/api/v1/
+The API will be available at: http://127.0.0.1:5000/api/v1/
 
-La documentation Swagger est disponible sur : http://127.0.0.1:5000/apidocs/
+Swagger documentation is available at: http://127.0.0.1:5000/apidocs/
 
- Tests et Documentation
-Les endpoints sont documentés via Swagger. Une fois le serveur lancé, visitez /apidocs pour tester les routes directement depuis le navigateur.
+ Tests and Documentation
+Endpoints are documented via Swagger. Once the server is running, visit /apidocs to test routes directly from the browser.
  
-Auteurs
-Projet Portfolio - Wassef / Nina / Warren
+Authors
+Portfolio Project - Wassef / Nina / Warren
