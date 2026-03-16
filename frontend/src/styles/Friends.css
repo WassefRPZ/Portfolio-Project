@@ -1,0 +1,226 @@
+
+.friends-page h1 {
+  margin: 0 0 18px;
+  color: #2e2e2e;
+  font-size: 34px;
+}
+
+.friends-loading,
+.friends-empty {
+  color: #999;
+  padding: 18px 0;
+}
+
+.friends-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid #e6e6e6;
+  background: #fff;
+  color: #555;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  background: #f4f1ea;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.tab--active {
+  background: #6d4c41;
+  color: #fff;
+  border-color: #6d4c41;
+  box-shadow: 0 2px 8px rgba(109, 76, 65, 0.25);
+}
+
+.tab--active:hover {
+  background: #6d4c41;
+  transform: none;
+}
+
+.friends-list {
+  display: grid;
+  gap: 12px;
+  max-width: 700px;
+}
+
+.friend-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 14px;
+  padding: 14px 18px;
+  gap: 14px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.friend-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+}
+
+.friend-card__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.friend-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #6d4c41;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.friend-name {
+  font-weight: 800;
+  color: #2e2e2e;
+}
+
+.friend-city {
+  font-size: 13px;
+  color: #999;
+}
+
+.friend-card__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.friend-badge {
+  font-size: 13px;
+  color: #999;
+  font-weight: 600;
+}
+
+.friend-badge--ok {
+  color: #388e3c;
+}
+
+.btn-brown-sm {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  background: #6d4c41;
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.btn-brown-sm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 76, 65, 0.3);
+}
+.btn-brown-sm:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
+
+.btn-outline-sm {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #6d4c41;
+  background: #fff;
+  color: #6d4c41;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-outline-sm:hover {
+  background: #f4f1ea;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(109, 76, 65, 0.15);
+}
+.btn-outline-sm:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
+
+.btn-danger-sm {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #e57373;
+  background: #fff;
+  color: #c62828;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-danger-sm:hover {
+  background: #ffebee;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(198, 40, 40, 0.15);
+}
+.btn-danger-sm:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
+
+.friends-search-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  max-width: 500px;
+}
+
+.friends-search-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.friends-search-input:focus {
+  border-color: #6d4c41;
+  box-shadow: 0 0 0 3px rgba(109, 76, 65, 0.1);
+}
+
+@media (max-width: 768px) {
+  .friends-list {
+    max-width: 100%;
+  }
+  .friends-search-form {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .friends-page h1 {
+    font-size: 26px;
+  }
+  .friends-tabs {
+    gap: 6px;
+  }
+  .tab {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .friend-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .friend-card__actions {
+    align-self: flex-end;
+  }
+}

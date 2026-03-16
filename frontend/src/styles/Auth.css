@@ -1,0 +1,152 @@
+
+.auth-page {
+  display: flex;
+  height: 100vh;
+}
+
+.auth-left {
+  flex: 1;
+  background: #ececec;
+  padding: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-brand {
+  margin-bottom: 40px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-brand h1 {
+  color: #6d4c41;
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.auth-brand p {
+  color: #555;
+}
+
+.auth-form {
+  max-width: 400px;
+}
+
+.auth-error {
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.auth-error--login {
+  background: #fdecea;
+  color: #c62828;
+}
+
+.auth-error--signup {
+  max-width: 400px;
+  border: 1px solid #c62828;
+  background: #fff;
+  color: #c62828;
+  font-weight: 700;
+}
+
+.auth-field {
+  margin-bottom: 20px;
+}
+
+.auth-field input {
+  width: 100%;
+  padding: 14px;
+  margin-top: 6px;
+  border-radius: 10px;
+  border: 1px solid #d5cfcb;
+  background: #f8f8f8;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-field input:focus {
+  border-color: #6d4c41;
+  box-shadow: 0 0 0 3px rgba(109, 76, 65, 0.1);
+  background: #fff;
+}
+
+.auth-remember {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.auth-submit {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: none;
+  background: #6d4c41;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.auth-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(109, 76, 65, 0.35);
+}
+
+.auth-switch {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.auth-switch a {
+  color: #c62828;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.auth-switch a:hover {
+  opacity: 0.8;
+}
+
+.auth-right {
+  flex: 1;
+  background: #e8e3d8;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-right h2 {
+  margin-top: 40px;
+  color: #6d4c41;
+}
+
+.auth-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+@media (max-width: 768px) {
+  .auth-page {
+    flex-direction: column;
+  }
+  .auth-left {
+    padding: 40px 24px;
+  }
+  .auth-right {
+    display: none;
+  }
+  .auth-form {
+    max-width: 100%;
+  }
+}
