@@ -287,7 +287,7 @@ erDiagram
 
   PROFILES {
     INT id PK
-    INT user_id FK UK
+    INT user_id FK
     VARCHAR username UK
     TEXT bio
     VARCHAR city
@@ -340,8 +340,8 @@ erDiagram
   }
 
   FAVORITE_GAMES {
-    INT user_id PK, FK
-    INT game_id PK, FK
+    INT user_id FK
+    INT game_id FK
     DATETIME added_at
   }
 
