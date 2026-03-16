@@ -1,3 +1,7 @@
+/**
+ * Page d'inscription : formulaire et logique de creation de compte.
+ */
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
