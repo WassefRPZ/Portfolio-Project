@@ -1,3 +1,7 @@
+/**
+ * Page de liste des evenements : filtres, pagination et navigation.
+ */
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";

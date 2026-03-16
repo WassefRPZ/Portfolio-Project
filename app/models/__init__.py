@@ -1,3 +1,5 @@
+"""Exports centralises des modeles SQLAlchemy pour simplifier les imports."""
+
 from app.models.user              import User              # noqa: F401
 from app.models.profile           import Profile           # noqa: F401
 from app.models.game              import Game              # noqa: F401

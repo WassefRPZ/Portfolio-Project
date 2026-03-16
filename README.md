@@ -123,6 +123,24 @@ Portfolio-Project/
 └── tests/                  # Unit and integration tests (pytest)
 ```
 
+### Vue d'ensemble des flux
+
+```mermaid
+flowchart LR
+  FE[Front-end React]
+  API[API REST]
+  BE[Back-end Flask]
+  DB[(Database MySQL)]
+  EXT((External APIs\nOpenCage Geocoding API\nCloudinary API))
+
+  FE -->|HTTPS requests| API
+  API -->|JSON responses JWT| FE
+
+  API <--> BE
+  BE <--> |SQLAlchemy CRUD write| DB
+  BE <--> |External API calls geocoding images| EXT
+```
+
 ### Patterns Used
 
 - **Factory Pattern** : `create_app()` in `app/__init__.py`
@@ -253,6 +271,116 @@ users (id, email, password_hash, role, created_at)
   └── posts (id, author_id, post_type, content, image_url, created_at)
 
 games (id, name, description, min_players, max_players, play_time_min, image_url)
+```
+
+### Diagramme
+
+```mermaid
+erDiagram
+  USERS {
+    INT id PK
+    VARCHAR email UK
+    VARCHAR password_hash
+    ENUM role
+    DATETIME created_at
+  }
+
+  PROFILES {
+    INT id PK
+    INT user_id FK UK
+    VARCHAR username UK
+    TEXT bio
+    VARCHAR city
+    VARCHAR region
+    VARCHAR profile_image_url
+  }
+
+  GAMES {
+    INT id PK
+    VARCHAR name UK
+    TEXT description
+    INT min_players
+    INT max_players
+    INT play_time_min
+    VARCHAR image_url
+  }
+
+  EVENTS {
+    INT id PK
+    INT creator_id FK
+    INT game_id FK
+    VARCHAR title
+    TEXT description
+    DATETIME date_time
+    VARCHAR location_text
+    VARCHAR city
+    VARCHAR region
+    INT max_players
+    ENUM status
+    VARCHAR cover_url
+    FLOAT latitude
+    FLOAT longitude
+    DATETIME created_at
+  }
+
+  EVENT_PARTICIPANTS {
+    INT id PK
+    INT event_id FK
+    INT user_id FK
+    ENUM status
+    DATETIME joined_at
+  }
+
+  EVENT_COMMENTS {
+    INT id PK
+    INT event_id FK
+    INT user_id FK
+    TEXT content
+    DATETIME created_at
+  }
+
+  FAVORITE_GAMES {
+    INT user_id PK, FK
+    INT game_id PK, FK
+    DATETIME added_at
+  }
+
+  FRIENDS {
+    INT id PK
+    INT user_id_1 FK
+    INT user_id_2 FK
+    INT requester_id FK
+    ENUM status
+    DATETIME created_at
+  }
+
+  POSTS {
+    INT id PK
+    INT author_id FK
+    ENUM post_type
+    TEXT content
+    VARCHAR image_url
+    DATETIME created_at
+  }
+
+  USERS ||--|| PROFILES : "has one"
+  USERS ||--o{ EVENTS : "creates"
+  GAMES ||--o{ EVENTS : "used by"
+
+  EVENTS ||--o{ EVENT_PARTICIPANTS : "has"
+  USERS ||--o{ EVENT_PARTICIPANTS : "joins"
+
+  EVENTS ||--o{ EVENT_COMMENTS : "contains"
+  USERS ||--o{ EVENT_COMMENTS : "writes"
+
+  USERS ||--o{ FAVORITE_GAMES : "favorites"
+  GAMES ||--o{ FAVORITE_GAMES : "favorited"
+
+  USERS ||--o{ POSTS : "authors"
+
+  USERS ||--o{ FRIENDS : "user_id_1"
+  USERS ||--o{ FRIENDS : "user_id_2"
+  USERS ||--o{ FRIENDS : "requester_id"
 ```
 
 ### Tables

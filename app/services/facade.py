@@ -1,3 +1,27 @@
+"""
+Façade métier (Couche service/application).
+
+Cette classe centralise toutes les règles applicatives entre:
+- Les routes API (la frontière avec les clients)
+- La couche persistence (repository, accès base de données)
+- Les intégrations externes (OpenCage pour géocodage, Cloudinary pour images)
+
+Organisation:
+- Auth: Inscription, connexion, validation des mots de passe  
+- Users: Profils, mise à jour, recherche
+- Games: Catalogue, favoris
+- Events: CRUD, participation, filtres géog et temporels
+- Search: Recherche globale multi-entités
+- Posts: Flux social, CRUD
+- Friends: Graphe relationnel, demandes d'amitié
+
+Principes de conception:
+- Attributs: Toutes les requêtes passent par les repositories
+- Responsabilité unique: Chaque méthode encapsule un cas d'usage
+- Gestion d'erreur: Retourne toujours un tuple (résultat, erreur)
+- Transactions: Délègue la gestion des sessions à SQLAlchemy
+"""
+
 import os
 import re
 from datetime import datetime, timezone
@@ -17,21 +41,37 @@ from app.persistence.repository import (
 
 
 class BoardGameFacade:
+    """
+    Façade métier centralisée pour la gestion des jeux de société en ligne.
+    
+    Point d'entrée unique pour toute la logique applicative.
+    Délègue l'accès aux données aux repositories et coordonne les interactions
+    entre eux selon les règles métier de l'application.
+    """
 
     def __init__(self):
-        self.users = UserRepository()
-        self.profiles = ProfileRepository()
-        self.games = GameRepository()
-        self.events = EventRepository()
-        self.participants = EventParticipantRepository()
-        self.comments = EventCommentRepository()
-        self.favorites = FavoriteGameRepository()
-        self.friends = FriendRepository()
-        self.posts = PostRepository()
+        """
+        Initialise tous les repositories lors de la création de la façade.
+        Chaque repository correspond à une entité du domaine.
+        """
+        self.users = UserRepository()  # Gestion des utilisateurs/comptes
+        self.profiles = ProfileRepository()  # Profils publics des utilisateurs
+        self.games = GameRepository()  # Catalogue de jeux
+        self.events = EventRepository()  # Événements et filtres géographiques
+        self.participants = EventParticipantRepository()  # Inscriptions aux événements
+        self.comments = EventCommentRepository()  # Commentaires d'événements
+        self.favorites = FavoriteGameRepository()  # Relation utilisateur-jeu favori
+        self.friends = FriendRepository()  # Graphe relationnel d'amitié
+        self.posts = PostRepository()  # Posts du fil social
 
     # ── Auth ──────────────────────────────────────────────────────────────
 
     def register_user(self, data):
+        """Cree un compte utilisateur avec validations metier strictes.
+
+        Verifie les champs obligatoires, la robustesse du mot de passe,
+        l'unicite email/pseudo, puis cree User + Profile dans la meme transaction.
+        """
         for field in ['username', 'email', 'password', 'city']:
             if not data.get(field):
                 return None, f"Le champ '{field}' est requis"
@@ -78,6 +118,7 @@ class BoardGameFacade:
         return user.to_dict(), None
 
     def login_user(self, email, password):
+        """Authentifie un utilisateur via email + mot de passe."""
         user = self.users.get_by_email(email)
         if user and check_password_hash(user.password_hash, password):
             return user.to_dict(), None
@@ -86,6 +127,7 @@ class BoardGameFacade:
     # ── Users ─────────────────────────────────────────────────────────────
 
     def get_user(self, user_id):
+        """Retourne le profil complet d'un utilisateur avec ses jeux favoris."""
         user = self.users.get_by_id(user_id)
         if not user:
             return None
@@ -94,6 +136,11 @@ class BoardGameFacade:
         return user_data
 
     def update_user_profile(self, user_id, data, image_file=None):
+        """Met a jour le profil d'un utilisateur, avec upload d'image optionnel.
+
+        Si une image est fournie, elle est envoyee a Cloudinary puis l'URL est
+        persistee dans profile_image_url.
+        """
         user = self.users.get_by_id(user_id)
         if not user:
             return None, "Utilisateur introuvable"
@@ -126,9 +173,11 @@ class BoardGameFacade:
         return user.to_dict(), None
 
     def search_users(self, query, city=None):
+        """Recherche des utilisateurs en renvoyant uniquement des donnees publiques."""
         return [u.to_public_dict() for u in self.users.search(query, city)]
 
     def get_public_user(self, user_id):
+        """Retourne la vue publique d'un utilisateur et ses favoris."""
         user = self.users.get_by_id(user_id)
         if not user:
             return None
@@ -139,17 +188,21 @@ class BoardGameFacade:
     # ── Games ─────────────────────────────────────────────────────────────
 
     def list_games(self, limit=50, offset=0):
+        """Liste paginee du catalogue de jeux avec total pour le frontend."""
         games = self.games.get_all(limit=limit, offset=offset)
         total = self.games.count()
         return [g.to_dict() for g in games], total
 
     def search_games(self, query):
+        """Recherche textuelle de jeux par nom."""
         return [g.to_dict() for g in self.games.search(query)]
 
     def get_favorite_games(self, user_id):
+        """Retourne la liste des jeux favoris d'un utilisateur."""
         return [g.to_dict() for g in self.favorites.get_games_for_user(user_id)]
 
     def add_favorite_game(self, user_id, game_id):
+        """Ajoute un jeu aux favoris d'un utilisateur si absent."""
         game = self.games.get_by_id(game_id)
         if not game:
             return None, "Jeu introuvable"
@@ -161,6 +214,7 @@ class BoardGameFacade:
         return game.to_dict(), None
 
     def remove_favorite_game(self, user_id, game_id):
+        """Retire un jeu de la liste des favoris d'un utilisateur."""
         favorite = self.favorites.get(user_id, game_id)
         if not favorite:
             return None, "Ce jeu n'est pas dans vos favoris"
@@ -171,6 +225,11 @@ class BoardGameFacade:
     # ── Events ────────────────────────────────────────────────────────────
 
     def _geocode(self, location_text):
+        """Transforme une adresse textuelle en coordonnees geographiques.
+
+        Utilise l'API OpenCage pour recuperer latitude, longitude, ville et region.
+        Renvoie (dict, None) en succes ou (None, message_erreur) en echec.
+        """
         api_key = os.getenv('OPENCAGE_API_KEY')
         if not api_key:
             return None, "Clé API OpenCage manquante (OPENCAGE_API_KEY)"
@@ -216,6 +275,7 @@ class BoardGameFacade:
         }, None
 
     def _upload_to_cloudinary(self, file, folder=None):
+        """Envoie une image sur Cloudinary et retourne son URL securisee."""
         options = {'resource_type': 'image'}
         if folder:
             options['folder'] = folder
@@ -234,6 +294,11 @@ class BoardGameFacade:
         return url, None
 
     def get_events(self, city=None, date=None, limit=50, offset=0, lat=None, lng=None, radius=10):
+        """Recupere la liste d'evenements ouverts avec filtres et pagination.
+
+        Enrichit chaque evenement avec son jeu associe et la liste des IDs de
+        participants confirmes, utile pour afficher l'etat de participation cote front.
+        """
         events_list, total_count, error = self.events.get_open_events(
             city=city, date=date, limit=limit, offset=offset,
             lat=lat, lng=lng, radius=radius,
@@ -251,10 +316,12 @@ class BoardGameFacade:
         return result, total_count, None
 
     def get_event(self, event_id):
+        """Retourne un evenement en vue simple (sans enrichissement complet)."""
         event = self.events.get_by_id(event_id)
         return event.to_dict() if event else None
 
     def get_event_details(self, event_id):
+        """Retourne la vue detail d'un evenement avec createur, jeu et participants."""
         event = self.events.get_by_id_full(event_id)
         if not event:
             return None
@@ -267,6 +334,11 @@ class BoardGameFacade:
         return event_data
 
     def create_event(self, data, creator_id, image_file=None):
+        """Cree un evenement et inscrit automatiquement le createur.
+
+        Le flux applique les validations metier (date future, max_players,
+        existence du jeu), geocode l'adresse, puis persiste l'evenement.
+        """
         if not self.games.get_by_id(data['game_id']):
             return None, "Ce jeu n'existe pas"
 
@@ -281,6 +353,7 @@ class BoardGameFacade:
         except (ValueError, TypeError):
             return None, "Format de date invalide. Utiliser ISO 8601 (ex: 2024-12-25T19:00:00)"
 
+        # Accepte date naive ou timezone-aware, mais impose qu'elle soit future
         now_utc = datetime.now(timezone.utc)
         if event_date_time.tzinfo:
             if event_date_time <= now_utc:
@@ -316,6 +389,7 @@ class BoardGameFacade:
         db.session.add(event)
         db.session.flush()
 
+        # Le createur est automatiquement participant confirme de son propre evenement
         creator_participation = EventParticipant(
             event_id=event.id,
             user_id=creator_id,
@@ -328,6 +402,11 @@ class BoardGameFacade:
         return event.to_dict(), None
 
     def update_event(self, event_id, user_id, data):
+        """Met a jour un evenement en appliquant les regles de securite metier.
+
+        Seul le createur peut modifier l'evenement. Certaines transitions d'etat
+        sont bloquees (ex: evenement deja annule/termine).
+        """
         event = self.events.get_by_id(event_id)
         if not event:
             return None, "Événement introuvable"
@@ -391,6 +470,7 @@ class BoardGameFacade:
         return event.to_dict(), None
 
     def cancel_event(self, event_id, user_id):
+        """Annule un evenement; reserve au createur tant qu'il est actif."""
         event = self.events.get_by_id(event_id)
         if not event:
             return None, "Événement introuvable"
@@ -406,6 +486,7 @@ class BoardGameFacade:
         return event.to_dict(), None
 
     def join_event(self, event_id, user_id):
+        """Inscrit un utilisateur a un evenement ouvert, si une place est disponible."""
         event = self.events.get_by_id(event_id)
         if not event:
             return None, "Événement introuvable"
@@ -436,6 +517,7 @@ class BoardGameFacade:
         return participation.to_dict(), None
 
     def leave_event(self, event_id, user_id):
+        """Desinscrit un participant confirme et ajuste le statut de capacite."""
         event = self.events.get_by_id(event_id)
         if not event:
             return None, "Événement introuvable"
@@ -458,9 +540,11 @@ class BoardGameFacade:
         return {"success": True}, None
 
     def get_event_comments(self, event_id, limit=50, offset=0):
+        """Retourne les commentaires d'un evenement avec pagination."""
         return [c.to_dict() for c in self.comments.get_by_event(event_id, limit=limit, offset=offset)]
 
     def add_comment(self, event_id, user_id, content):
+        """Cree un commentaire sur un evenement et retourne sa serialisation."""
         comment = EventComment(
             event_id=event_id,
             user_id=user_id,
@@ -472,6 +556,7 @@ class BoardGameFacade:
     # ── Search ────────────────────────────────────────────────────────────
 
     def global_search(self, query):
+        """Recherche globale utilisateurs + evenements en une seule operation."""
         found_users  = [u.to_public_dict() for u in self.users.search(query)]
         found_events = [e.to_dict() for e in self.events.search(query)]
         return {"users": found_users, "events": found_events}
@@ -479,6 +564,7 @@ class BoardGameFacade:
     # ── Posts ──────────────────────────────────────────────────────────────
 
     def create_post(self, author_id, data, image_file=None):
+        """Cree un post texte/image/news avec validation minimale de contenu."""
         content = (data.get('content') or '').strip()
         post_type = data.get('post_type', 'text')
 
@@ -503,19 +589,21 @@ class BoardGameFacade:
             image_url=image_url,
         )
         self.posts.save(post)
-        # Force load author + profile so to_dict() includes username & avatar
+        # Force le chargement auteur+profil pour inclure username et avatar dans to_dict()
         db.session.refresh(post)
         if post.author:
             _ = post.author.profile
         return post.to_dict(), None
 
     def get_post(self, post_id):
+        """Recupere un post unique; renvoie une erreur s'il est absent."""
         post = self.posts.get_by_id(post_id)
         if not post:
             return None, "Post introuvable"
         return post.to_dict(), None
 
     def update_post(self, current_user_id, post_id, data):
+        """Met a jour le contenu d'un post appartenant a l'utilisateur courant."""
         post = self.posts.get_by_id(post_id)
         if not post:
             return None, "Post introuvable"
@@ -533,6 +621,7 @@ class BoardGameFacade:
         return post.to_dict(), None
 
     def delete_post(self, current_user_id, post_id):
+        """Supprime un post si l'utilisateur courant en est l'auteur."""
         post = self.posts.get_by_id(post_id)
         if not post:
             return None, "Post introuvable"
@@ -543,16 +632,19 @@ class BoardGameFacade:
         return {"success": True}, None
 
     def list_posts(self, limit=50, offset=0):
+        """Retourne un flux pagine de posts recents."""
         posts, total = self.posts.get_all(limit=limit, offset=offset)
         return [p.to_dict() for p in posts], total
 
     def list_user_posts(self, user_id, limit=50, offset=0):
+        """Retourne les posts pagines d'un utilisateur cible."""
         posts, total = self.posts.get_by_author(user_id, limit=limit, offset=offset)
         return [p.to_dict() for p in posts], total
 
     # ── Friends ───────────────────────────────────────────────────────────
 
     def send_friend_request(self, requester_id, receiver_id):
+        """Cree une demande d'ami si aucune relation active n'existe deja."""
         if requester_id == receiver_id:
             return None, "Impossible de s'ajouter soi-même en ami"
 
@@ -575,6 +667,7 @@ class BoardGameFacade:
         return friendship.to_dict(), None
 
     def accept_friend_request(self, current_user_id, requester_id):
+        """Accepte une demande d'ami recue par l'utilisateur courant."""
         friendship = self.friends.get_friendship(current_user_id, requester_id)
         if not friendship:
             return None, "Aucune demande d'ami trouvée"
@@ -590,6 +683,7 @@ class BoardGameFacade:
         return friendship.to_dict(), None
 
     def reject_friend_request(self, current_user_id, requester_id):
+        """Refuse une demande d'ami en attente (suppression de la relation)."""
         friendship = self.friends.get_friendship(current_user_id, requester_id)
         if not friendship:
             return None, "Aucune demande d'ami trouvée"
@@ -604,6 +698,7 @@ class BoardGameFacade:
         return {"success": True}, None
 
     def remove_friend(self, current_user_id, other_user_id):
+        """Supprime une relation d'amitie existante entre deux utilisateurs."""
         friendship = self.friends.get_friendship(current_user_id, other_user_id)
         if not friendship:
             return None, "Aucune relation d'amitié trouvée"
@@ -612,6 +707,7 @@ class BoardGameFacade:
         return {"success": True}, None
 
     def get_friends_list(self, user_id):
+        """Construit la liste des profils publics correspondant aux amities acceptees."""
         friendships = self.friends.get_friends(user_id)
         result = []
         for f in friendships:
@@ -622,6 +718,7 @@ class BoardGameFacade:
         return result
 
     def get_pending_requests(self, user_id):
+        """Retourne les demandes d'amitie recues en attente de reponse."""
         received = self.friends.get_pending_received(user_id)
         result = []
         for f in received:
@@ -634,6 +731,7 @@ class BoardGameFacade:
         return result
 
     def get_sent_requests(self, user_id):
+        """Retourne les demandes d'amitie envoyees par l'utilisateur."""
         sent = self.friends.get_pending_sent(user_id)
         result = []
         for f in sent:

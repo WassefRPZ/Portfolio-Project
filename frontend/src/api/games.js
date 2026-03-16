@@ -1,3 +1,7 @@
+/**
+ * Fonctions API des jeux : listing pagine et recherche.
+ */
+
 import { apiRequest } from "./client";
 
 export async function getAllGames(token) {

@@ -1,3 +1,7 @@
+/**
+ * Page d'accueil : conteneur principal des contenus du tableau de bord.
+ */
+
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";

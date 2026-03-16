@@ -1,3 +1,5 @@
+"""Blueprint API v1 : enregistre et expose les routes versionnees."""
+
 from flask import Blueprint
 
 api_v1 = Blueprint('api_v1', __name__)

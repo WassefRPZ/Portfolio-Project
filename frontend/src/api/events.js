@@ -1,3 +1,7 @@
+/**
+ * Fonctions API des evenements : CRUD, participation et commentaires.
+ */
+
 import { apiRequest } from "./client";
 
 export async function getEvents(token, { city, date, limit = 50, offset = 0 } = {}) {

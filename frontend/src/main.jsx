@@ -1,3 +1,7 @@
+/**
+ * Initialisation du frontend et rendu de la racine React.
+ */
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";

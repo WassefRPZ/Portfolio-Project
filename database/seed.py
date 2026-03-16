@@ -1,3 +1,9 @@
+"""Script de peuplement initial de la base.
+
+Injecte des comptes administrateurs et un catalogue de jeux de base pour
+faciliter les tests et le developpement local.
+"""
+
 import sys
 import os
 

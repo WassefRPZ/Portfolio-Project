@@ -1,3 +1,7 @@
+/**
+ * Barre laterale de navigation et actions utilisateur.
+ */
+
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Sidebar.css";

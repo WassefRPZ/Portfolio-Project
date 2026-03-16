@@ -1,3 +1,7 @@
+/**
+ * Page de creation d'evenement : gestion du formulaire, validation et envoi.
+ */
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";

@@ -1,3 +1,7 @@
+/**
+ * Composant visuel decoratif sur le theme D20.
+ */
+
 export default function D20Fantasy() {
   return (
     <svg width="240" height="240" viewBox="0 0 240 240" aria-label="D20">

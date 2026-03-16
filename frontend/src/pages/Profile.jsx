@@ -1,3 +1,7 @@
+/**
+ * Page profil : consultation et modification des informations utilisateur.
+ */
+
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getMe, updateProfile } from "../api/users";

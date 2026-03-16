@@ -1,3 +1,7 @@
+/**
+ * Fonctions API utilisateur : profil, recherche et jeux favoris.
+ */
+
 import { apiRequest } from "./client";
 
 export async function getMe(token) {

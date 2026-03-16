@@ -1,3 +1,8 @@
+/**
+ * Configuration ESLint du frontend.
+ * Definit les regles de qualite et les environnements analyses.
+ */
+
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'

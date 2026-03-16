@@ -1,3 +1,7 @@
+/**
+ * Page jeux : exploration du catalogue et recherche.
+ */
+
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import {

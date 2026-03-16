@@ -1,3 +1,7 @@
+/**
+ * Fonctions API des posts : gestion du fil social et operations CRUD.
+ */
+
 import { apiRequest } from "./client";
 
 export async function getFeed(token, { limit = 20, offset = 0 } = {}) {

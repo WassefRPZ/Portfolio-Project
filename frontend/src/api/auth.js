@@ -1,3 +1,7 @@
+/**
+ * Fonctions API d'authentification : connexion, inscription et gestion du token.
+ */
+
 const API = "/api/v1";
 
 export async function loginUser(email, password) {

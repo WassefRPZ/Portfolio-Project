@@ -1,3 +1,7 @@
+/**
+ * Fonctions API sociales : demandes d'amis, acceptation/refus et listes.
+ */
+
 import { apiRequest } from "./client";
 
 export async function getFriends(token) {

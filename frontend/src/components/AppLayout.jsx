@@ -1,3 +1,7 @@
+/**
+ * Layout partage de l'application et orchestration de la navigation laterale.
+ */
+
 import { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";

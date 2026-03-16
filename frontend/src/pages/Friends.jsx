@@ -1,3 +1,7 @@
+/**
+ * Page amis : demandes en attente, demandes envoyees et relations acceptees.
+ */
+
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import {

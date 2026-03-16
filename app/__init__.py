@@ -1,3 +1,5 @@
+"""Fabrique Flask de l'application : initialise les extensions, le CORS, le JWT et Swagger."""
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
