@@ -607,4 +607,4 @@ Swagger documentation is available at: http://127.0.0.1:5000/apidocs/
 Endpoints are documented via Swagger. Once the server is running, visit /apidocs to test routes directly from the browser.
  
 Authors
-Portfolio Project - Wassef / Nina / Warren
+Portfolio Project - Wassef / Warren

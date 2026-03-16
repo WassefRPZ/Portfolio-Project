@@ -1,1 +1,0 @@
-"""Package API : point d'entree pour l'organisation des modules de routes."""
